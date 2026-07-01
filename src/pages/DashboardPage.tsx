@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PageShell from '../components/PageShell';
-import { api, type DashboardData } from '../lib/api';
+import { api, API_URL, type DashboardData } from '../lib/api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+import { API_URL } from '../lib/api';
 
 interface SaleRecord {
   id: string;

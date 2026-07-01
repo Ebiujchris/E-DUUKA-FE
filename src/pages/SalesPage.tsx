@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import PageShell from '../components/PageShell';
 import { useAuth } from '../context/AuthContext';
+import { API_URL } from '../lib/api';
 
 interface ProductItem {
   id: string;
@@ -56,8 +57,8 @@ export default function SalesPage() {
     try {
       setLoading(true);
       const [productsResponse, salesResponse] = await Promise.all([
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/products`, { headers: authHeaders }),
-        fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/sales`, { headers: authHeaders }),
+        fetch(`${API_URL}/products`, { headers: authHeaders }),
+        fetch(`${API_URL}/sales`, { headers: authHeaders }),
       ]);
 
       if (!productsResponse.ok || !salesResponse.ok) throw new Error('Unable to load sales data');
@@ -90,7 +91,7 @@ export default function SalesPage() {
     setError(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/sales`, {
+      const response = await fetch(`${API_URL}/sales`, {
         method: 'POST',
         headers: authHeaders,
         body: JSON.stringify({

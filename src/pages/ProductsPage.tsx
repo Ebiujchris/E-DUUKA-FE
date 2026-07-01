@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import PageShell from '../components/PageShell';
+import { API_URL } from '../lib/api';
 
 interface ProductItem {
   id: string;
@@ -31,7 +32,7 @@ export default function ProductsPage() {
   const loadProducts = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/products`, {
+      const response = await fetch(`${API_URL}/products`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem('authToken') || ''}`,
         },
@@ -57,7 +58,7 @@ export default function ProductsPage() {
     setMessage(null);
 
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/products`, {
+      const response = await fetch(`${API_URL}/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

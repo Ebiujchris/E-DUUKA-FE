@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import PageShell from '../components/PageShell';
 import { useAuth } from '../context/AuthContext';
+import { API_URL } from '../lib/api';
 
 interface ReportsSummary {
   sales: number;
@@ -30,7 +31,7 @@ export default function ReportsPage() {
       try {
         setLoading(true);
         setSummary({ sales: 0, profit: 0, transactions: 0 });
-        const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/sales/range?startDate=${encodeURIComponent(new Date(Date.now() - (period === 'today' ? 24 : period === 'week' ? 7 : 30) * 60 * 60 * 1000).toISOString())}&endDate=${encodeURIComponent(new Date().toISOString())}`, { headers: authHeaders });
+        const response = await fetch(`${API_URL}/sales/range?startDate=${encodeURIComponent(new Date(Date.now() - (period === 'today' ? 24 : period === 'week' ? 7 : 30) * 60 * 60 * 1000).toISOString())}&endDate=${encodeURIComponent(new Date().toISOString())}`, { headers: authHeaders });
         if (!response.ok) throw new Error('Unable to load reports');
         const data = await response.json();
         const sales = Array.isArray(data) ? data : [];
