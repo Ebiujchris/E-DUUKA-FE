@@ -4,8 +4,6 @@ import { useAuth } from '../context/AuthContext';
 import PageShell from '../components/PageShell';
 import { api, API_URL, type DashboardData } from '../lib/api';
 
-import { API_URL } from '../lib/api';
-
 interface SaleRecord {
   id: string;
   product?: { name: string; buyingPrice?: number };
