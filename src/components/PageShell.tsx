@@ -12,6 +12,8 @@ const navItems = [
   { label: 'Inventory', path: '/products', icon: '📦' },
   { label: 'Sales', path: '/sales', icon: '🛍️' },
   { label: 'Reports', path: '/reports', icon: '📈' },
+  { label: 'Staff', path: '/staff', icon: '👥' },
+  { label: 'Suppliers', path: '/suppliers', icon: '🚚' },
   { label: 'Calendar', path: '/calendar', icon: '🗓️' },
 ];
 
