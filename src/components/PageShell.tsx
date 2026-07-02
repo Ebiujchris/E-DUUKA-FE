@@ -17,11 +17,6 @@ const navItems = [
   { label: 'Calendar', path: '/calendar' },
 ];
 
-const salesLinks = [
-  { label: 'New sale', path: '/sales' },
-  { label: 'Sales history', path: '/sales' },
-  { label: 'Receipts', path: '/dashboard' },
-];
 
 export default function PageShell({ title, description, children }: PageShellProps) {
   const { logout } = useAuth();
@@ -79,24 +74,6 @@ export default function PageShell({ title, description, children }: PageShellPro
               </NavLink>
             ))}
 
-            <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
-              <p className="px-1 text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">Sales</p>
-              <div className="mt-2 space-y-1.5">
-                {salesLinks.map((item) => (
-                  <NavLink
-                    key={item.label}
-                    to={item.path}
-                    className={({ isActive }) =>
-                      `flex items-center rounded-xl px-2.5 py-2 text-sm transition ${
-                        isActive ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:bg-white hover:text-slate-900'
-                      }`
-                    }
-                  >
-                    <span>{item.label}</span>
-                  </NavLink>
-                ))}
-              </div>
-            </div>
           </div>
         </aside>
 
