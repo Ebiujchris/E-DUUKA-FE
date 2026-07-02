@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 interface FetchState<T> {
-  data: T | null;
+  data: T | undefined;
   loading: boolean;
   error: string | null;
 }
@@ -23,7 +23,7 @@ export function useFetch<T>(
   options: UseFetchOptions = {},
 ) {
   const { enabled = true } = options;
-  const [state, setState] = useState<FetchState<T>>({ data: null, loading: enabled, error: null });
+  const [state, setState] = useState<FetchState<T>>({ data: undefined, loading: enabled, error: null });
   const abortRef = useRef<AbortController | null>(null);
   const fetcherRef = useRef(fetcher);
   fetcherRef.current = fetcher;
@@ -43,7 +43,7 @@ export function useFetch<T>(
     } catch (err: unknown) {
       if (!controller.signal.aborted) {
         const msg = err instanceof Error ? err.message : 'Something went wrong';
-        setState((prev) => ({ ...prev, loading: false, error: msg }));
+        setState((prev) => ({ ...prev, data: prev.data ?? undefined, loading: false, error: msg }));
       }
     }
   }, []);
