@@ -2,10 +2,9 @@ import { Link } from 'react-router-dom';
 
 interface NavbarProps {
   onSignIn: () => void;
-  onRegister: () => void;
 }
 
-export default function Navbar({ onSignIn, onRegister }: NavbarProps) {
+export default function Navbar({ onSignIn }: NavbarProps) {
   return (
     <header className="fixed top-0 inset-x-0 z-50 border-b border-white/10 bg-slate-850/80 backdrop-blur-xl">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4 lg:px-8">
