@@ -207,22 +207,29 @@ export default function SalesPage() {
             <span className="text-sm text-slate-500">{visibleSales.length} of {sales.length} entries</span>
           </div>
 
-          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <div className="mt-4 space-y-3">
             <input
-              className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-              placeholder="Search buyer or product"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+              placeholder="Search buyer or product..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             />
-            <select
-              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value as 'all' | 'cash' | 'credit')}
-            >
-              <option value="all">All sales</option>
-              <option value="cash">Cash</option>
-              <option value="credit">Credit</option>
-            </select>
+            <div className="flex gap-2">
+              {(['all', 'cash', 'credit'] as const).map((f) => (
+                <button
+                  key={f}
+                  type="button"
+                  onClick={() => { setFilter(f); setPage(1); }}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${
+                    filter === f ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  {f === 'all' && `All (${sales.length})`}
+                  {f === 'cash' && `Cash (${sales.filter((s) => s.paymentType === 'cash').length})`}
+                  {f === 'credit' && `Credit (${sales.filter((s) => s.paymentType === 'credit').length})`}
+                </button>
+              ))}
+            </div>
           </div>
 
           {loading ? (
@@ -238,24 +245,52 @@ export default function SalesPage() {
               No matching sales found.
             </div>
           ) : (
-            <div className="mt-4 space-y-3">
-              {visibleSales.map((sale) => (
-                <div key={sale.id} className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-slate-900">{sale.product?.name ?? 'Product'}</p>
-                      <p className="text-sm text-slate-500">
-                        {sale.quantity} units • {sale.paymentType} • {sale.customerName ?? 'Walk-in customer'}
-                      </p>
-                      {sale.status ? <p className="text-xs text-slate-500">{sale.status}</p> : null}
-                    </div>
-                    <div className="text-right">
-                      <p className="font-semibold text-slate-900">{formatCurrency(sale.totalAmount)}</p>
-                      <p className="text-sm text-slate-500">{new Date(sale.createdAt).toLocaleString()}</p>
+            <div className="mt-4 max-h-[480px] overflow-y-auto space-y-2 pr-1">
+              {visibleSales.map((sale) => {
+                const isCredit = sale.paymentType === 'credit';
+                const isPaid = sale.status === 'paid';
+                return (
+                  <div
+                    key={sale.id}
+                    className={`rounded-xl border p-3 ${
+                      isCredit && !isPaid
+                        ? 'border-amber-200 bg-amber-50'
+                        : 'border-slate-200 bg-slate-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-medium text-slate-900">{sale.product?.name ?? 'Product'}</p>
+                          <span
+                            className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${
+                              isCredit
+                                ? 'bg-amber-100 text-amber-600'
+                                : 'bg-emerald-100 text-emerald-600'
+                            }`}
+                          >
+                            {sale.paymentType}
+                          </span>
+                          {sale.status && (
+                            <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">
+                              {sale.status}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 text-xs text-slate-500">
+                          {sale.quantity} units · {sale.customerName ?? 'Walk-in customer'}
+                        </p>
+                      </div>
+                      <div className="shrink-0 text-right">
+                        <p className="font-semibold text-slate-900">{formatCurrency(sale.totalAmount)}</p>
+                        <p className="text-xs text-slate-400">
+                          {new Date(sale.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
 
