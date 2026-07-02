@@ -89,35 +89,7 @@ export default function LandingPage() {
                 Track inventory, record sales, manage credits, and grow your business — on web and mobile.
               </p>
 
-              <div className="mt-10 flex flex-wrap gap-4">
-                <button
-                  type="button"
-                  onClick={() => openAuth('register')}
-                  className="rounded-xl bg-brand-500 px-7 py-3.5 text-sm font-semibold text-white shadow-xl shadow-brand-500/30 transition hover:bg-brand-400"
-                >
-                  Start for free
-                </button>
-                <button
-                  type="button"
-                  onClick={() => openAuth('login')}
-                  className="rounded-xl border border-slate-600 px-7 py-3.5 text-sm font-semibold text-slate-200 transition hover:border-slate-500 hover:bg-slate-800"
-                >
-                  Sign in
-                </button>
-              </div>
 
-              <div className="mt-12 flex flex-wrap gap-8">
-                {[
-                  { value: '100%', label: 'Free to start' },
-                  { value: '24/7', label: 'Access anywhere' },
-                  { value: 'Offline', label: 'Mobile sync' },
-                ].map((stat) => (
-                  <div key={stat.label}>
-                    <div className="font-display text-2xl font-bold text-white">{stat.value}</div>
-                    <div className="text-sm text-slate-500">{stat.label}</div>
-                  </div>
-                ))}
-              </div>
             </div>
 
             {/* Dashboard preview card */}
@@ -207,30 +179,6 @@ export default function LandingPage() {
                 <p className="mt-2 text-slate-600">{item.text}</p>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA */}
-      <section className="py-24">
-        <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="relative overflow-hidden rounded-3xl bg-slate-850 px-8 py-16 text-center sm:px-16">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-brand-500/20 to-transparent" />
-            <div className="relative">
-              <h2 className="font-display text-3xl font-bold text-white sm:text-4xl">
-                Ready to grow your business?
-              </h2>
-              <p className="mx-auto mt-4 max-w-xl text-lg text-slate-400">
-                Join shop owners across Uganda using E-DUUKA to run their businesses smarter.
-              </p>
-              <button
-                type="button"
-                onClick={() => openAuth('register')}
-                className="mt-8 rounded-xl bg-brand-500 px-8 py-4 text-sm font-semibold text-white shadow-xl shadow-brand-500/30 transition hover:bg-brand-400"
-              >
-                Create free account
-              </button>
-            </div>
           </div>
         </div>
       </section>

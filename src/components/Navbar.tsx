@@ -35,13 +35,6 @@ export default function Navbar({ onSignIn, onRegister }: NavbarProps) {
           >
             Sign In
           </button>
-          <button
-            type="button"
-            onClick={onRegister}
-            className="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-500/25 transition hover:bg-brand-400"
-          >
-            Get Started
-          </button>
         </div>
       </nav>
     </header>

@@ -1,5 +1,7 @@
 const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
-export const API_URL = rawApiUrl.replace(/\/$/, '');
+// Ensure /api prefix is always present
+const normalized = rawApiUrl.replace(/\/$/, '');
+export const API_URL = normalized.endsWith('/api') ? normalized : `${normalized}/api`;
 
 export interface User {
   id: string;
