@@ -17,7 +17,6 @@ interface StaffMember {
 }
 
 const ROLES = ['cashier', 'manager', 'stock_keeper', 'owner'];
-const STATUS = ['active', 'inactive', 'on_leave'];
 
 const roleBadge: Record<string, string> = {
   owner: 'bg-purple-100 text-purple-700',
