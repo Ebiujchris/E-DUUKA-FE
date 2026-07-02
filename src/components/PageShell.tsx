@@ -8,19 +8,19 @@ interface PageShellProps {
 }
 
 const navItems = [
-  { label: 'Overview', path: '/dashboard', icon: '◉' },
-  { label: 'Inventory', path: '/products', icon: '📦' },
-  { label: 'Sales', path: '/sales', icon: '🛍️' },
-  { label: 'Reports', path: '/reports', icon: '📈' },
-  { label: 'Staff', path: '/staff', icon: '👥' },
-  { label: 'Suppliers', path: '/suppliers', icon: '🚚' },
-  { label: 'Calendar', path: '/calendar', icon: '🗓️' },
+  { label: 'Overview', path: '/dashboard' },
+  { label: 'Inventory', path: '/products' },
+  { label: 'Sales', path: '/sales' },
+  { label: 'Reports', path: '/reports' },
+  { label: 'Staff', path: '/staff' },
+  { label: 'Suppliers', path: '/suppliers' },
+  { label: 'Calendar', path: '/calendar' },
 ];
 
 const salesLinks = [
-  { label: 'New sale', path: '/sales', icon: '➕' },
-  { label: 'Sales history', path: '/sales', icon: '🧾' },
-  { label: 'Receipts', path: '/dashboard', icon: '🧾' },
+  { label: 'New sale', path: '/sales' },
+  { label: 'Sales history', path: '/sales' },
+  { label: 'Receipts', path: '/dashboard' },
 ];
 
 export default function PageShell({ title, description, children }: PageShellProps) {
@@ -70,12 +70,11 @@ export default function PageShell({ title, description, children }: PageShellPro
                 key={item.path}
                 to={item.path}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-2xl px-3 py-2.5 text-sm font-medium transition ${
+                  `flex items-center rounded-2xl px-3 py-2.5 text-sm font-medium transition ${
                     isActive ? 'bg-brand-50 text-brand-700 shadow-sm' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   }`
                 }
               >
-                <span className="text-base">{item.icon}</span>
                 <span>{item.label}</span>
               </NavLink>
             ))}
@@ -88,12 +87,11 @@ export default function PageShell({ title, description, children }: PageShellPro
                     key={item.label}
                     to={item.path}
                     className={({ isActive }) =>
-                      `flex items-center gap-2 rounded-xl px-2.5 py-2 text-sm transition ${
+                      `flex items-center rounded-xl px-2.5 py-2 text-sm transition ${
                         isActive ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:bg-white hover:text-slate-900'
                       }`
                     }
                   >
-                    <span className="text-sm">{item.icon}</span>
                     <span>{item.label}</span>
                   </NavLink>
                 ))}
