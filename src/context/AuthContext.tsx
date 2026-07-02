@@ -81,7 +81,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event.key === TOKEN_KEY || event.key === USER_KEY) {
         const token = localStorage.getItem(TOKEN_KEY);
         const storedUser = localStorage.getItem(USER_KEY);
-
         if (!token) {
           sessionVersionRef.current += 1;
           api.setToken(null);
@@ -89,24 +88,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setLoading(false);
           return;
         }
-
         api.setToken(token);
         if (storedUser) {
-          try {
-            setUser(JSON.parse(storedUser));
-          } catch {
-            localStorage.removeItem(USER_KEY);
-            setUser(null);
-          }
+          try { setUser(JSON.parse(storedUser)); }
+          catch { localStorage.removeItem(USER_KEY); setUser(null); }
         }
       }
     };
 
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
+    // Handle token expiry dispatched by ApiService
+    const handleExpired = () => {
+      sessionVersionRef.current += 1;
+      setUser(null);
+      setLoading(false);
+    };
 
-  const persistSession = useCallback((token: string, nextUser: User) => {
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('auth:expired', handleExpired);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('auth:expired', handleExpired);
+    };
+  }, []);  const persistSession = useCallback((token: string, nextUser: User) => {
     localStorage.setItem(TOKEN_KEY, token);
     localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
     api.setToken(token);
