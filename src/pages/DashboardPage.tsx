@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PageShell from '../components/PageShell';
 import { api, API_URL, type DashboardData } from '../lib/api';
+import { printHtml } from '../lib/print';
 
 interface SaleRecord {
   id: string;
@@ -307,8 +308,31 @@ export default function DashboardPage() {
             </div>
 
             <div className="mt-5 flex gap-3">
-              <button type="button" onClick={() => window.print()} className="flex-1 rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white">
-                Print receipt
+              <button type="button" onClick={() => {
+                const r = selectedReceipt;
+                printHtml(`
+                  <h1>Receipt</h1>
+                  <p class="meta">Invoice #${r.id.slice(0, 8).toUpperCase()} &nbsp;·&nbsp; ${formatDate(r.createdAt)}</p>
+                  <hr class="divider" />
+                  <table>
+                    <tr><th>Item</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Total</th></tr>
+                    <tr>
+                      <td>${r.product?.name ?? 'Product'}</td>
+                      <td class="right">${r.quantity}</td>
+                      <td class="right">${formatCurrency(r.unitPrice)}</td>
+                      <td class="right">${formatCurrency(r.totalAmount)}</td>
+                    </tr>
+                  </table>
+                  <hr class="divider" />
+                  <table>
+                    <tr><td>Customer</td><td class="right">${r.customerName ?? 'Walk-in customer'}</td></tr>
+                    <tr><td>Payment</td><td class="right" style="text-transform:capitalize">${r.paymentType}</td></tr>
+                    <tr><td><strong>Total</strong></td><td class="right"><strong>${formatCurrency(r.totalAmount)}</strong></td></tr>
+                  </table>
+                  <p class="footer">Thank you for your business &nbsp;·&nbsp; E-DUUKA</p>
+                `, `Receipt #${r.id.slice(0, 8).toUpperCase()}`);
+              }} className="flex-1 rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white">
+                Print / Download PDF
               </button>
               <button type="button" onClick={() => setSelectedReceipt(null)} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
                 Done

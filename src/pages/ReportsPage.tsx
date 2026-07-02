@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import PageShell from '../components/PageShell';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../lib/api';
+import { printHtml } from '../lib/print';
 
 const fmt = (n: number) =>
   `UGX ${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
@@ -112,16 +113,62 @@ export default function ReportsPage() {
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [expenses]);
 
+  const periodLabel = period === 'today' ? 'Today' : period === 'week' ? 'This week' : 'This month';
+
+  const handlePrint = () => {
+    const rows = (arr: [string, string][]) =>
+      arr.map(([l, v]) => `<tr><td>${l}</td><td class="right">${v}</td></tr>`).join('');
+
+    const topProductRows = topProducts.map((p, i) =>
+      `<tr><td>${i + 1}. ${p.name}</td><td class="right">${fmt(p.revenue)}</td><td class="right">${p.qty} units</td></tr>`).join('');
+
+    const topCustomerRows = topCustomers.map((c, i) =>
+      `<tr><td>${i + 1}. ${c.name}</td><td class="right">${fmt(c.total)}</td><td class="right">${c.count} orders</td></tr>`).join('');
+
+    const expenseRows = expensesByCategory.map(([cat, total]) =>
+      `<tr><td style="text-transform:capitalize">${cat.replace('_', ' ')}</td><td class="right red">${fmt(total)}</td></tr>`).join('');
+
+    const html = `
+      <h1>E-DUUKA — Sales Report</h1>
+      <p class="meta">Period: ${periodLabel} &nbsp;·&nbsp; Generated: ${new Date().toLocaleString()}</p>
+      <div class="summary">
+        <div class="card"><div class="label">Revenue</div><div class="value">${fmt(stats.revenue)}</div></div>
+        <div class="card"><div class="label">Gross Profit</div><div class="value green">${fmt(stats.profit)}</div></div>
+        <div class="card"><div class="label">Expenses</div><div class="value red">${fmt(stats.totalExpenses)}</div></div>
+        <div class="card"><div class="label">Net Profit</div><div class="value ${stats.netProfit >= 0 ? 'green' : 'red'}">${fmt(stats.netProfit)}</div></div>
+      </div>
+      <table><tr><th>Metric</th><th class="right">Value</th></tr>
+        ${rows([['Transactions', String(stats.transactions)], ['Cash Sales', fmt(stats.cashSales)], ['Credit Sales', fmt(stats.creditSales)]])}
+      </table>
+      ${topProducts.length ? `<h2>Best Selling Products</h2>
+        <table><tr><th>Product</th><th class="right">Revenue</th><th class="right">Qty</th></tr>${topProductRows}</table>` : ''}
+      ${topCustomers.length ? `<h2>Top Customers</h2>
+        <table><tr><th>Customer</th><th class="right">Total Spent</th><th class="right">Orders</th></tr>${topCustomerRows}</table>` : ''}
+      ${expensesByCategory.length ? `<h2>Expenses by Category</h2>
+        <table><tr><th>Category</th><th class="right">Amount</th></tr>${expenseRows}</table>` : ''}
+      <p class="footer">E-DUUKA Shop Management &nbsp;·&nbsp; ${new Date().getFullYear()}</p>`;
+
+    printHtml(html, `E-DUUKA Report — ${periodLabel}`);
+  };
+
   return (
     <PageShell title="Reports" description="Sales performance, profit breakdown and top insights.">
       {/* Period selector */}
-      <div className="flex flex-wrap gap-2 mb-6">
-        {(['today', 'week', 'month'] as Period[]).map((p) => (
-          <button key={p} type="button" onClick={() => setPeriod(p)}
-            className={`rounded-full px-4 py-2 text-sm font-medium transition ${period === p ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-            {p === 'today' ? 'Today' : p === 'week' ? 'This week' : 'This month'}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div className="flex flex-wrap gap-2">
+          {(['today', 'week', 'month'] as Period[]).map((p) => (
+            <button key={p} type="button" onClick={() => setPeriod(p)}
+              className={`rounded-full px-4 py-2 text-sm font-medium transition ${period === p ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+              {p === 'today' ? 'Today' : p === 'week' ? 'This week' : 'This month'}
+            </button>
+          ))}
+        </div>
+        {!loading && !error && (
+          <button type="button" onClick={handlePrint}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50">
+            Print / Download PDF
           </button>
-        ))}
+        )}
       </div>
 
       {loading ? (
