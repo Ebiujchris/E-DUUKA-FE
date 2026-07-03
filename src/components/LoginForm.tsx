@@ -23,7 +23,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [devCode, setDevCode] = useState(''); // shown in dev/demo mode
+  const [devCode, setDevCode] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -57,9 +57,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.message || 'Failed to send reset code');
-      // Backend returns the code directly (demo mode — in production this would be SMS)
       if (data.code) {
-        setDevCode(data.code);
         setInfo(`Your reset code is: ${data.code} (normally sent via SMS)`);
       } else {
         setInfo('Reset code sent. Check your SMS.');
