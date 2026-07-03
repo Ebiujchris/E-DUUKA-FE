@@ -17,7 +17,7 @@ export default function SettingsPage() {
 
   const [profile, setProfile] = useState({ name: user?.name ?? '', email: user?.email ?? '' });
   const [shop, setShop] = useState<ShopInfo | null>(null);
-  const [shopForm, setShopForm] = useState({ name: '', location: '' });
+
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' });
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
@@ -30,7 +30,6 @@ export default function SettingsPage() {
         setProfile({ name: data.name ?? '', email: data.email ?? '' });
         if (data.shop) {
           setShop(data.shop);
-          setShopForm({ name: data.shop.name ?? '', location: data.shop.location ?? '' });
         }
       })
       .catch(() => {});
