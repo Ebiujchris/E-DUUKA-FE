@@ -23,7 +23,6 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
   const [resetCode, setResetCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [devCode, setDevCode] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
