@@ -48,6 +48,8 @@ export default function SalesPage() {
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 6;
+  const [voidingId, setVoidingId] = useState<string | null>(null);
+  const [voidReason, setVoidReason] = useState('');
 
   const { data: products = [], loading: prodLoading } = useFetch<ProductItem[]>(
     () => fetch(`${API_URL}/products`, { headers: authHeader() }).then((r) => r.json()),
@@ -151,6 +153,24 @@ export default function SalesPage() {
     const matchSearch = !q || [s.product?.name, s.customerName, s.paymentType].some((v) => v?.toLowerCase().includes(q));
     return matchFilter && matchSearch;
   }), [sales, filter, search]);
+
+  const handleVoid = async (id: string) => {
+    if (!voidReason.trim()) { toast.error('Enter a reason for voiding'); return; }
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/sales/${id}/void`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({ reason: voidReason }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload.message || 'Failed to void sale');
+      toast.success('Sale voided — stock restored');
+      setVoidingId(null); setVoidReason('');
+      bustCache('/sales'); bustCache('/products'); reload();
+    } catch (err) { toast.error(err instanceof Error ? err.message : 'Void failed'); }
+    finally { setSubmitting(false); }
+  };
 
   const visibleSales = filteredSales.slice(0, page * PAGE_SIZE);
   const hasMore = visibleSales.length < filteredSales.length;
@@ -279,22 +299,42 @@ export default function SalesPage() {
                 <div className="mt-4 max-h-[520px] overflow-y-auto space-y-2 pr-1">
                   {visibleSales.map((sale) => {
                     const isCredit = sale.paymentType === 'credit';
+                    const isVoided = sale.status === 'voided';
                     return (
-                      <div key={sale.id} className={`rounded-xl border p-3 ${isCredit && sale.status !== 'paid' ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-slate-50'}`}>
+                      <div key={sale.id} className={`rounded-xl border p-3 ${isVoided ? 'border-slate-200 bg-slate-100 opacity-60' : isCredit ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-slate-50'}`}>
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <div className="flex items-center gap-2">
+                            <div className="flex items-center gap-2 flex-wrap">
                               <p className="truncate font-medium text-slate-900">{sale.product?.name ?? 'Product'}</p>
-                              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${isCredit ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>{sale.paymentType}</span>
-                              {sale.status && sale.status !== 'active' && <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-500">{sale.status}</span>}
+                              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${isCredit ? 'bg-amber-100 text-amber-600' : 'bg-emerald-100 text-emerald-600'}`}>{sale.paymentType.replace('_',' ')}</span>
+                              {isVoided && <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-500">voided</span>}
                             </div>
                             <p className="mt-0.5 text-xs text-slate-500">{sale.quantity} units · {sale.customerName ?? 'Walk-in customer'}</p>
+                            <p className="text-xs text-slate-400">{new Date(sale.createdAt).toLocaleString()}</p>
                           </div>
                           <div className="shrink-0 text-right">
-                            <p className="font-semibold text-slate-900">{fmt(sale.totalAmount)}</p>
-                            <p className="text-xs text-slate-400">{new Date(sale.createdAt).toLocaleDateString()}</p>
+                            <p className={`font-semibold ${isVoided ? 'line-through text-slate-400' : 'text-slate-900'}`}>{fmt(sale.totalAmount)}</p>
+                            {!isVoided && (
+                              <button type="button"
+                                onClick={() => { setVoidingId(voidingId === sale.id ? null : sale.id); setVoidReason(''); }}
+                                className="mt-1 text-xs text-slate-400 hover:text-red-500 transition">
+                                Void
+                              </button>
+                            )}
                           </div>
                         </div>
+                        {voidingId === sale.id && (
+                          <div className="mt-3 border-t border-slate-200 pt-3 flex items-center gap-2">
+                            <input autoFocus type="text" placeholder="Reason for void"
+                              className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm focus:border-red-400 focus:outline-none"
+                              value={voidReason} onChange={(e) => setVoidReason(e.target.value)} />
+                            <button type="button" onClick={() => handleVoid(sale.id)} disabled={submitting}
+                              className="rounded-xl bg-red-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-60">
+                              {submitting ? '…' : 'Confirm'}
+                            </button>
+                            <button type="button" onClick={() => setVoidingId(null)} className="text-xs text-slate-400 hover:text-slate-600">Cancel</button>
+                          </div>
+                        )}
                       </div>
                     );
                   })}

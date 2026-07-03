@@ -2,345 +2,223 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PageShell from '../components/PageShell';
-import { api, API_URL, type DashboardData } from '../lib/api';
-import { printHtml } from '../lib/print';
+import { API_URL, authHeader } from '../lib/api';
 
-interface SaleRecord {
-  id: string;
-  product?: { name: string; buyingPrice?: number };
-  quantity: number;
-  unitPrice: number;
-  totalAmount: number;
-  paymentType: string;
-  status?: string;
-  customerName?: string;
-  createdAt: string;
-}
-
-const formatCurrency = (amount: number | null | undefined) => {
-  const safeAmount = Number.isFinite(Number(amount)) ? Number(amount) : 0;
-  return `UGX ${safeAmount.toLocaleString('en-US', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}`;
+const fc = (n: number | null | undefined) => {
+  const v = Number.isFinite(Number(n)) ? Number(n) : 0;
+  return `UGX ${v.toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 };
 
-const formatDate = (value: string) =>
-  new Date(value).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+interface TodayStats {
+  revenue: number;
+  profit: number;
+  expenses: number;
+  transactions: number;
+  cashSales: number;
+  creditSales: number;
+}
+
+interface LowStockProduct { id: string; name: string; stock: number }
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
-  const [sales, setSales] = useState<SaleRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedReceipt, setSelectedReceipt] = useState<SaleRecord | null>(null);
+  const [today, setToday]       = useState<TodayStats | null>(null);
+  const [weekRev, setWeekRev]   = useState<number>(0);
+  const [monthRev, setMonthRev] = useState<number>(0);
+  const [lowStock, setLowStock] = useState<LowStockProduct[]>([]);
+  const [outstanding, setOutstanding] = useState<number>(0);
+  const [loading, setLoading]   = useState(true);
 
   useEffect(() => {
-    let isMounted = true;
+    if (!user) return;
+    const h = authHeader();
+    const now = new Date();
 
-    if (!user) {
-      setDashboardData(null);
-      setSales([]);
-      setLoading(false);
-      setError(null);
-      return () => {
-        isMounted = false;
-      };
-    }
+    const todayStart = new Date(now); todayStart.setHours(0,0,0,0);
+    const todayEnd   = new Date(now); todayEnd.setHours(23,59,59,999);
 
-    const loadDashboard = async () => {
+    const weekStart  = new Date(now); weekStart.setDate(now.getDate() - 7); weekStart.setHours(0,0,0,0);
+
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd   = new Date(now.getFullYear(), now.getMonth()+1, 0, 23,59,59,999);
+
+    const enc = encodeURIComponent;
+
+    const load = async () => {
+      setLoading(true);
       try {
-        setLoading(true);
-        setError(null);
-        setDashboardData(null);
-        setSales([]);
-        const token = localStorage.getItem('authToken') || '';
-        const [dashboard, salesResponse] = await Promise.all([
-          api.getDashboardData(),
-          fetch(`${API_URL}/sales`, {
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token}`,
-            },
-          }),
+        const [sToday, sWeek, sMonth, eToday, credStats, lsRes] = await Promise.all([
+          fetch(`${API_URL}/sales/range?startDate=${enc(todayStart.toISOString())}&endDate=${enc(todayEnd.toISOString())}`, { headers: h }).then(r => r.ok ? r.json() : []),
+          fetch(`${API_URL}/sales/range?startDate=${enc(weekStart.toISOString())}&endDate=${enc(todayEnd.toISOString())}`, { headers: h }).then(r => r.ok ? r.json() : []),
+          fetch(`${API_URL}/sales/range?startDate=${enc(monthStart.toISOString())}&endDate=${enc(monthEnd.toISOString())}`, { headers: h }).then(r => r.ok ? r.json() : []),
+          fetch(`${API_URL}/expenses/by-date-range?startDate=${enc(todayStart.toISOString())}&endDate=${enc(todayEnd.toISOString())}`, { headers: h }).then(r => r.ok ? r.json() : []),
+          fetch(`${API_URL}/credits/stats`, { headers: h }).then(r => r.ok ? r.json() : { totalOutstanding: 0 }),
+          fetch(`${API_URL}/products/low-stock`, { headers: h }).then(r => r.ok ? r.json() : []),
         ]);
 
-        if (!salesResponse.ok) throw new Error('Unable to load sales history');
-        const salesPayload = await salesResponse.json();
+        const active = (arr: any[]) => arr.filter((s: any) => s.status !== 'voided');
+        const sumAmt  = (arr: any[]) => arr.reduce((s: number, x: any) => s + Number(x.totalAmount), 0);
+        const sumProfit = (arr: any[]) => arr.reduce((s: number, x: any) =>
+          s + (Number(x.unitPrice) - Number(x.product?.buyingPrice ?? 0)) * Number(x.quantity), 0);
 
-        if (isMounted) {
-          setDashboardData(dashboard);
-          setSales(Array.isArray(salesPayload) ? salesPayload : []);
-        }
-      } catch (err) {
-        if (isMounted) {
-          setError(err instanceof Error ? err.message : 'Unable to load dashboard data');
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
+        const todayActive = active(sToday);
+        setToday({
+          revenue:      sumAmt(todayActive),
+          profit:       sumProfit(todayActive),
+          expenses:     eToday.reduce((s: number, e: any) => s + Number(e.amount), 0),
+          transactions: todayActive.length,
+          cashSales:    todayActive.filter((s: any) => s.paymentType === 'cash').reduce((s: number, x: any) => s + Number(x.totalAmount), 0),
+          creditSales:  todayActive.filter((s: any) => s.paymentType === 'credit').reduce((s: number, x: any) => s + Number(x.totalAmount), 0),
+        });
+        setWeekRev(sumAmt(active(sWeek)));
+        setMonthRev(sumAmt(active(sMonth)));
+        setOutstanding(Number(credStats.totalOutstanding ?? 0));
+        setLowStock(Array.isArray(lsRes) ? lsRes.slice(0, 5) : []);
+      } catch {/* silent */}
+      finally { setLoading(false); }
     };
+    load();
+  }, [user?.id]);
 
-    loadDashboard();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [user?.id, user?.phone]);
-
-  const summary = useMemo(() => {
-    const profitMade = sales.reduce((sum, sale) => {
-      const buyingPrice = sale.product?.buyingPrice ?? 0;
-      const profit = buyingPrice > 0 && sale.unitPrice > buyingPrice ? (sale.unitPrice - buyingPrice) * sale.quantity : 0;
-      return sum + profit;
-    }, 0);
-
-    const lossesMade = sales.reduce((sum, sale) => {
-      const buyingPrice = sale.product?.buyingPrice ?? 0;
-      const loss = buyingPrice > 0 && sale.unitPrice < buyingPrice ? (buyingPrice - sale.unitPrice) * sale.quantity : 0;
-      return sum + loss;
-    }, 0);
-
-    return {
-      profitMade,
-      lossesMade,
-      revenue: sales.reduce((sum, sale) => sum + sale.totalAmount, 0),
-      transactions: sales.length,
-    };
-  }, [sales]);
+  const netToday = useMemo(() => today ? today.profit - today.expenses : 0, [today]);
+  const greet = useMemo(() => {
+    const h = new Date().getHours();
+    return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  }, []);
 
   return (
-    <PageShell title="Dashboard" description="A modern merchant overview for sales, inventory, reports, and receipts.">
+    <PageShell title="Dashboard" description="Today's performance at a glance.">
       <div className="space-y-6">
-        <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-brand-600 p-6 text-white shadow-lg shadow-slate-200">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+
+        {/* Hero */}
+        <section className="rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-brand-600 p-5 sm:p-6 text-white shadow-lg">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.25em] text-brand-100">Good morning</p>
-              <h2 className="mt-2 font-display text-3xl font-semibold">Welcome back, {user?.name ?? 'merchant'}.</h2>
-              <p className="mt-3 max-w-2xl text-sm text-slate-200">
-                Manage inventory, record fresh sales, review profit and loss, and share receipts with your customers from one place.
-              </p>
+              <p className="text-xs font-semibold uppercase tracking-widest text-brand-200">{greet}</p>
+              <h2 className="mt-1 text-2xl sm:text-3xl font-bold">{user?.name ?? 'Merchant'}</h2>
+              <p className="mt-2 text-sm text-slate-300">Here's how your shop is doing today.</p>
             </div>
-            <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur">
-              <p className="text-xs uppercase tracking-[0.24em] text-brand-100">Today</p>
-              <p className="mt-1 text-xl font-semibold">{dashboardData?.today?.transactions ?? 0} transactions</p>
+            <div className="flex gap-3 flex-wrap">
+              <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 backdrop-blur min-w-[110px]">
+                <p className="text-xs text-brand-200 uppercase tracking-wide">Transactions</p>
+                <p className="mt-1 text-2xl font-bold">{today?.transactions ?? 0}</p>
+              </div>
+              <div className={`rounded-2xl border px-4 py-3 backdrop-blur min-w-[110px] ${netToday >= 0 ? 'border-emerald-400/30 bg-emerald-500/20' : 'border-red-400/30 bg-red-500/20'}`}>
+                <p className="text-xs text-slate-300 uppercase tracking-wide">Net today</p>
+                <p className={`mt-1 text-xl font-bold ${netToday >= 0 ? 'text-emerald-300' : 'text-red-300'}`}>{fc(netToday)}</p>
+              </div>
             </div>
           </div>
         </section>
 
-        {loading ? (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-slate-500">
-            Loading your commerce dashboard...
+        {/* Low stock + outstanding credits alert bar */}
+        {!loading && (lowStock.length > 0 || outstanding > 0) && (
+          <div className="flex flex-col sm:flex-row gap-3">
+            {lowStock.length > 0 && (
+              <Link to="/restock" className="flex-1 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100 transition">
+                <span className="text-xl">⚠️</span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-amber-800">{lowStock.length} product{lowStock.length > 1 ? 's' : ''} low/out of stock</p>
+                  <p className="text-xs text-amber-600 truncate">{lowStock.map(p => p.name).join(', ')}</p>
+                </div>
+                <span className="ml-auto text-xs font-semibold text-amber-700 shrink-0">Restock →</span>
+              </Link>
+            )}
+            {outstanding > 0 && (
+              <Link to="/credits" className="flex-1 flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 hover:bg-red-100 transition">
+                <span className="text-xl">💰</span>
+                <div>
+                  <p className="text-sm font-semibold text-red-800">Outstanding credit debt</p>
+                  <p className="text-xs text-red-600">{fc(outstanding)} owed to you</p>
+                </div>
+                <span className="ml-auto text-xs font-semibold text-red-700 shrink-0">View →</span>
+              </Link>
+            )}
           </div>
-        ) : error ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm text-red-600">{error}</div>
+        )}
+
+        {loading ? (
+          <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-10 text-center text-slate-500">Loading dashboard…</div>
         ) : (
           <>
-            <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-sm text-slate-500">Revenue</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-900">{formatCurrency(dashboardData?.today?.sales ?? summary.revenue)}</p>
-                <p className="mt-1 text-sm text-slate-500">Live sales for this shop</p>
+            {/* Today KPIs */}
+            <section className="grid gap-4 grid-cols-2 xl:grid-cols-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <p className="text-xs text-slate-500 uppercase tracking-wide">Revenue today</p>
+                <p className="mt-1 text-xl font-bold text-slate-900">{fc(today?.revenue)}</p>
               </div>
-              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm">
-                <p className="text-sm text-emerald-700">Profit</p>
-                <p className="mt-2 text-2xl font-semibold text-emerald-900">{formatCurrency(summary.profitMade || (dashboardData?.today?.profit ?? 0))}</p>
-                <p className="mt-1 text-sm text-emerald-700">Positive margin from sold items</p>
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 shadow-sm">
+                <p className="text-xs text-emerald-700 uppercase tracking-wide">Gross profit</p>
+                <p className="mt-1 text-xl font-bold text-emerald-900">{fc(today?.profit)}</p>
               </div>
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
-                <p className="text-sm text-amber-700">Loss</p>
-                <p className="mt-2 text-2xl font-semibold text-amber-900">{formatCurrency(summary.lossesMade)}</p>
-                <p className="mt-1 text-sm text-amber-700">Items sold below cost</p>
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-4 shadow-sm">
+                <p className="text-xs text-red-600 uppercase tracking-wide">Expenses today</p>
+                <p className="mt-1 text-xl font-bold text-red-700">{fc(today?.expenses)}</p>
               </div>
-              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <p className="text-sm text-slate-500">Stock watch</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-900">{dashboardData?.inventory?.lowStockCount ?? 0}</p>
-                <p className="mt-1 text-sm text-slate-500">Low stock alert items</p>
+              <div className={`rounded-2xl border p-4 shadow-sm ${netToday >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}>
+                <p className={`text-xs uppercase tracking-wide ${netToday >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>Net profit</p>
+                <p className={`mt-1 text-xl font-bold ${netToday >= 0 ? 'text-emerald-900' : 'text-red-700'}`}>{fc(netToday)}</p>
               </div>
             </section>
 
-            <section className="grid gap-6 xl:grid-cols-[1.1fr,0.9fr]">
-              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-600">Quick flow</p>
-                    <h3 className="mt-1 text-xl font-semibold text-slate-900">Run your shop faster</h3>
-                  </div>
-                </div>
-
-                <div className="mt-5 grid gap-3 md:grid-cols-3">
-                  <Link to="/sales" className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-brand-200 hover:bg-brand-50">
-                    <p className="font-semibold text-slate-900">Add sales</p>
-                    <p className="mt-1 text-sm text-slate-500">Log cash or credit sales instantly.</p>
-                  </Link>
-                  <Link to="/products" className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-brand-200 hover:bg-brand-50">
-                    <p className="font-semibold text-slate-900">Add inventory</p>
-                    <p className="mt-1 text-sm text-slate-500">Create products and set stock levels.</p>
-                  </Link>
-                  <Link to="/reports" className="rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-brand-200 hover:bg-brand-50">
-                    <p className="font-semibold text-slate-900">Full reports</p>
-                    <p className="mt-1 text-sm text-slate-500">Review performance by day, week, and month.</p>
-                  </Link>
-                </div>
+            {/* Cash flow today */}
+            <section className="grid gap-4 sm:grid-cols-3">
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+                <p className="text-xs text-emerald-700">Cash in</p>
+                <p className="mt-1 text-lg font-bold text-emerald-900">{fc(today?.cashSales)}</p>
               </div>
-
-              <div className="rounded-3xl border border-slate-200 bg-slate-50 p-5 shadow-sm">
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-600">Performance snapshot</p>
-                <div className="mt-4 space-y-3">
-                  <div className="rounded-2xl bg-white p-4">
-                    <p className="text-sm text-slate-500">This week</p>
-                    <p className="mt-1 text-xl font-semibold text-slate-900">{formatCurrency(dashboardData?.week?.sales)}</p>
-                  </div>
-                  <div className="rounded-2xl bg-white p-4">
-                    <p className="text-sm text-slate-500">This month</p>
-                    <p className="mt-1 text-xl font-semibold text-slate-900">{formatCurrency(dashboardData?.month?.sales)}</p>
-                  </div>
-                  <div className="rounded-2xl bg-white p-4">
-                    <p className="text-sm text-slate-500">Profit margin</p>
-                    <p className="mt-1 text-xl font-semibold text-slate-900">{(Number.isFinite(Number(dashboardData?.month?.profitMargin)) ? Number(dashboardData?.month?.profitMargin) : 0).toFixed(1)}%</p>
-                  </div>
-                </div>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <p className="text-xs text-amber-700">Credit sales</p>
+                <p className="mt-1 text-lg font-bold text-amber-900">{fc(today?.creditSales)}</p>
+              </div>
+              <div className="rounded-2xl border border-red-200 bg-red-50 p-4">
+                <p className="text-xs text-red-600">Money out (expenses)</p>
+                <p className="mt-1 text-lg font-bold text-red-800">{fc(today?.expenses)}</p>
               </div>
             </section>
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                <div>
-                  <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-600">Sales preview</p>
-                  <h3 className="mt-1 text-xl font-semibold text-slate-900">Your latest sales are summarized here</h3>
-                </div>
-                <Link to="/sales" className="text-sm font-semibold text-brand-600 transition hover:text-brand-500">
-                  View full sales history
-                </Link>
-              </div>
-
-              {sales.length === 0 ? (
-                <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-                  No sales recorded yet.
-                </div>
-              ) : (
-                <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                  {sales.slice(0, 3).map((sale) => (
-                    <div key={sale.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <p className="font-semibold text-slate-900">{sale.product?.name ?? 'Product'}</p>
-                          <p className="mt-1 text-sm text-slate-500">{sale.customerName ?? 'Walk-in customer'}</p>
-                        </div>
-                        <span className={`rounded-full px-2.5 py-1 text-xs font-medium ${sale.paymentType === 'credit' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'}`}>
-                          {sale.paymentType}
-                        </span>
-                      </div>
-
-                      <div className="mt-4 flex items-center justify-between text-sm text-slate-600">
-                        <span>Amount</span>
-                        <span className="font-semibold text-slate-900">{formatCurrency(sale.totalAmount)}</span>
-                      </div>
-
-                      <div className="mt-3 flex items-center justify-between text-sm">
-                        <span className="text-slate-500">Date</span>
-                        <span className="font-medium text-slate-900">{formatDate(sale.createdAt)}</span>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => setSelectedReceipt(sale)}
-                        className="mt-4 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
-                      >
-                        Receipt / invoice
-                      </button>
+            {/* Performance + quick links */}
+            <section className="grid gap-6 lg:grid-cols-2">
+              {/* Period performance */}
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand-600 mb-3">Performance</p>
+                <div className="space-y-2">
+                  {[
+                    { label: 'This week revenue', value: fc(weekRev) },
+                    { label: 'This month revenue', value: fc(monthRev) },
+                    { label: 'Outstanding credits', value: fc(outstanding) },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex items-center justify-between rounded-xl bg-white px-4 py-3">
+                      <span className="text-sm text-slate-500">{label}</span>
+                      <span className="text-sm font-semibold text-slate-900">{value}</span>
                     </div>
                   ))}
                 </div>
-              )}
+              </div>
+
+              {/* Quick links */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <p className="text-xs font-semibold uppercase tracking-wide text-brand-600 mb-3">Quick actions</p>
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { label: 'New sale',    sub: 'Record a transaction', to: '/sales' },
+                    { label: 'Credits',     sub: 'Who owes you money', to: '/credits' },
+                    { label: 'Restock',     sub: 'Add stock to products', to: '/restock' },
+                    { label: 'Reports',     sub: 'Daily & monthly view', to: '/reports' },
+                    { label: 'Expenses',    sub: 'Record a cost', to: '/expenses' },
+                    { label: 'Receipts',    sub: 'Print/share receipts', to: '/receipts' },
+                  ].map(({ label, sub, to }) => (
+                    <Link key={to} to={to} className="rounded-xl border border-slate-200 bg-slate-50 p-3 hover:border-brand-200 hover:bg-brand-50 transition">
+                      <p className="text-sm font-semibold text-slate-900">{label}</p>
+                      <p className="text-xs text-slate-500 mt-0.5">{sub}</p>
+                    </Link>
+                  ))}
+                </div>
+              </div>
             </section>
           </>
         )}
       </div>
-
-      {selectedReceipt ? (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 px-4 py-6">
-          <div className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.2em] text-brand-600">Receipt preview</p>
-                <h3 className="mt-1 font-display text-2xl font-semibold text-slate-900">Invoice #{selectedReceipt.id.slice(0, 8).toUpperCase()}</h3>
-              </div>
-              <button type="button" onClick={() => setSelectedReceipt(null)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600">
-                Close
-              </button>
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-slate-500">Customer</p>
-                  <p className="font-semibold text-slate-900">{selectedReceipt.customerName ?? 'Walk-in customer'}</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-slate-500">Date</p>
-                  <p className="font-semibold text-slate-900">{formatDate(selectedReceipt.createdAt)}</p>
-                </div>
-              </div>
-
-              <div className="mt-4 border-t border-slate-200 pt-4">
-                <div className="flex items-center justify-between text-sm text-slate-600">
-                  <span>{selectedReceipt.product?.name ?? 'Product'}</span>
-                  <span>{selectedReceipt.quantity} × {formatCurrency(selectedReceipt.unitPrice)}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between text-sm text-slate-600">
-                  <span>Payment</span>
-                  <span className="capitalize">{selectedReceipt.paymentType}</span>
-                </div>
-                <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-4 text-base font-semibold text-slate-900">
-                  <span>Total</span>
-                  <span>{formatCurrency(selectedReceipt.totalAmount)}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-5 flex gap-3">
-              <button type="button" onClick={() => {
-                const r = selectedReceipt;
-                printHtml(`
-                  <h1>Receipt</h1>
-                  <p class="meta">Invoice #${r.id.slice(0, 8).toUpperCase()} &nbsp;·&nbsp; ${formatDate(r.createdAt)}</p>
-                  <hr class="divider" />
-                  <table>
-                    <tr><th>Item</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Total</th></tr>
-                    <tr>
-                      <td>${r.product?.name ?? 'Product'}</td>
-                      <td class="right">${r.quantity}</td>
-                      <td class="right">${formatCurrency(r.unitPrice)}</td>
-                      <td class="right">${formatCurrency(r.totalAmount)}</td>
-                    </tr>
-                  </table>
-                  <hr class="divider" />
-                  <table>
-                    <tr><td>Customer</td><td class="right">${r.customerName ?? 'Walk-in customer'}</td></tr>
-                    <tr><td>Payment</td><td class="right" style="text-transform:capitalize">${r.paymentType}</td></tr>
-                    <tr><td><strong>Total</strong></td><td class="right"><strong>${formatCurrency(r.totalAmount)}</strong></td></tr>
-                  </table>
-                  <p class="footer">Thank you for your business &nbsp;·&nbsp; E-DUUKA</p>
-                `, `Receipt #${r.id.slice(0, 8).toUpperCase()}`);
-              }} className="flex-1 rounded-xl bg-brand-500 px-4 py-3 text-sm font-semibold text-white">
-                Print / Download PDF
-              </button>
-              <button type="button" onClick={() => setSelectedReceipt(null)} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-700">
-                Done
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
     </PageShell>
   );
 }
