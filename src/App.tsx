@@ -90,7 +90,7 @@ export default function App() {
       <Route path="/restock"  element={<ProtectedRoute><RestockPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/balance-sheet" element={<ProtectedRoute><BalanceSheetPage /></ProtectedRoute>} />
-      <Route path="*" element={<Navigate to="/" replace />} />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
