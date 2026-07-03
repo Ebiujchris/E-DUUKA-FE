@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import PageShell from '../components/PageShell';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../lib/api';
@@ -6,8 +6,6 @@ import { printHtml } from '../lib/print';
 
 const fmt = (n: number) =>
   `UGX ${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
-
-type Period = 'today' | 'week' | 'month';
 
 interface SaleRecord {
   id: string;
@@ -29,9 +27,34 @@ interface Expense {
   expenseDate: string;
 }
 
+// ─── Calendar strip helpers ───────────────────────────────────────────────────
+
+function getDaysInMonth(year: number, month: number) {
+  return new Date(year, month + 1, 0).getDate();
+}
+
+function isSameDay(a: Date, b: Date) {
+  return a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+}
+
+const WEEKDAY = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 export default function ReportsPage() {
   const { user } = useAuth();
-  const [period, setPeriod] = useState<Period>('today');
+  const today = useMemo(() => new Date(), []);
+
+  // Calendar state
+  const [calYear, setCalYear] = useState(today.getFullYear());
+  const [calMonth, setCalMonth] = useState(today.getMonth());
+  const [selectedDate, setSelectedDate] = useState<Date>(today);
+  const stripRef = useRef<HTMLDivElement>(null);
+
+  // Data state
   const [sales, setSales] = useState<SaleRecord[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,23 +62,26 @@ export default function ReportsPage() {
 
   const authHeader = useMemo(() => ({ Authorization: `Bearer ${localStorage.getItem('authToken') || ''}` }), [user?.id]);
 
-  const getRange = (p: Period) => {
-    const now = new Date();
-    const start = new Date(now);
-    if (p === 'today') start.setHours(0, 0, 0, 0);
-    else if (p === 'week') start.setDate(now.getDate() - 7);
-    else start.setDate(1), start.setHours(0, 0, 0, 0);
-    return { start: start.toISOString(), end: now.toISOString() };
-  };
+  // Scroll today's date into view on mount
+  useEffect(() => {
+    setTimeout(() => {
+      const el = stripRef.current?.querySelector('[data-today="true"]') as HTMLElement | null;
+      el?.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }, 150);
+  }, [calMonth, calYear]);
 
+  // Load data whenever selected date changes
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true); setError(null);
-        const { start, end } = getRange(period);
+        const start = new Date(selectedDate);
+        start.setHours(0, 0, 0, 0);
+        const end = new Date(selectedDate);
+        end.setHours(23, 59, 59, 999);
         const [sRes, eRes] = await Promise.all([
-          fetch(`${API_URL}/sales/range?startDate=${encodeURIComponent(start)}&endDate=${encodeURIComponent(end)}`, { headers: authHeader }),
-          fetch(`${API_URL}/expenses/by-date-range?startDate=${encodeURIComponent(start)}&endDate=${encodeURIComponent(end)}`, { headers: authHeader }),
+          fetch(`${API_URL}/sales/range?startDate=${encodeURIComponent(start.toISOString())}&endDate=${encodeURIComponent(end.toISOString())}`, { headers: authHeader }),
+          fetch(`${API_URL}/expenses/by-date-range?startDate=${encodeURIComponent(start.toISOString())}&endDate=${encodeURIComponent(end.toISOString())}`, { headers: authHeader }),
         ]);
         setSales(sRes.ok ? await sRes.json() : []);
         setExpenses(eRes.ok ? await eRes.json() : []);
@@ -66,7 +92,7 @@ export default function ReportsPage() {
       }
     };
     load();
-  }, [period, user?.id]);
+  }, [selectedDate, user?.id]);
 
   const stats = useMemo(() => {
     const active = sales.filter((s) => s.status !== 'voided');
@@ -82,7 +108,6 @@ export default function ReportsPage() {
     return { revenue, profit, totalExpenses, netProfit, transactions: active.length, cashSales, creditSales };
   }, [sales, expenses]);
 
-  // Best selling products
   const topProducts = useMemo(() => {
     const map: Record<string, { name: string; qty: number; revenue: number }> = {};
     sales.filter((s) => s.status !== 'voided').forEach((s) => {
@@ -94,7 +119,6 @@ export default function ReportsPage() {
     return Object.values(map).sort((a, b) => b.revenue - a.revenue).slice(0, 5);
   }, [sales]);
 
-  // Top customers by spend
   const topCustomers = useMemo(() => {
     const map: Record<string, { name: string; total: number; count: number }> = {};
     sales.filter((s) => s.status !== 'voided' && s.customerName).forEach((s) => {
@@ -106,31 +130,36 @@ export default function ReportsPage() {
     return Object.values(map).sort((a, b) => b.total - a.total).slice(0, 5);
   }, [sales]);
 
-  // Expense breakdown by category
   const expensesByCategory = useMemo(() => {
     const map: Record<string, number> = {};
     expenses.forEach((e) => { map[e.category] = (map[e.category] ?? 0) + Number(e.amount); });
     return Object.entries(map).sort((a, b) => b[1] - a[1]);
   }, [expenses]);
 
-  const periodLabel = period === 'today' ? 'Today' : period === 'week' ? 'This week' : 'This month';
+  const daysInMonth = getDaysInMonth(calYear, calMonth);
+  const dateLabel = selectedDate.toLocaleDateString('en-UG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  const prevMonth = () => {
+    if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11); }
+    else setCalMonth(m => m - 1);
+  };
+  const nextMonth = () => {
+    if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0); }
+    else setCalMonth(m => m + 1);
+  };
 
   const handlePrint = () => {
     const rows = (arr: [string, string][]) =>
       arr.map(([l, v]) => `<tr><td>${l}</td><td class="right">${v}</td></tr>`).join('');
-
     const topProductRows = topProducts.map((p, i) =>
       `<tr><td>${i + 1}. ${p.name}</td><td class="right">${fmt(p.revenue)}</td><td class="right">${p.qty} units</td></tr>`).join('');
-
     const topCustomerRows = topCustomers.map((c, i) =>
       `<tr><td>${i + 1}. ${c.name}</td><td class="right">${fmt(c.total)}</td><td class="right">${c.count} orders</td></tr>`).join('');
-
     const expenseRows = expensesByCategory.map(([cat, total]) =>
       `<tr><td style="text-transform:capitalize">${cat.replace('_', ' ')}</td><td class="right red">${fmt(total)}</td></tr>`).join('');
-
     const html = `
-      <h1>E-DUUKA — Sales Report</h1>
-      <p class="meta">Period: ${periodLabel} &nbsp;·&nbsp; Generated: ${new Date().toLocaleString()}</p>
+      <h1>E-DUUKA — Daily Report</h1>
+      <p class="meta">Date: ${dateLabel} &nbsp;·&nbsp; Generated: ${new Date().toLocaleString()}</p>
       <div class="summary">
         <div class="card"><div class="label">Revenue</div><div class="value">${fmt(stats.revenue)}</div></div>
         <div class="card"><div class="label">Gross Profit</div><div class="value green">${fmt(stats.profit)}</div></div>
@@ -147,21 +176,61 @@ export default function ReportsPage() {
       ${expensesByCategory.length ? `<h2>Expenses by Category</h2>
         <table><tr><th>Category</th><th class="right">Amount</th></tr>${expenseRows}</table>` : ''}
       <p class="footer">E-DUUKA Shop Management &nbsp;·&nbsp; ${new Date().getFullYear()}</p>`;
-
-    printHtml(html, `E-DUUKA Report — ${periodLabel}`);
+    printHtml(html, `E-DUUKA Report — ${dateLabel}`);
   };
 
   return (
-    <PageShell title="Reports" description="Sales performance, profit breakdown and top insights.">
-      {/* Period selector */}
-      <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-        <div className="flex flex-wrap gap-2">
-          {(['today', 'week', 'month'] as Period[]).map((p) => (
-            <button key={p} type="button" onClick={() => setPeriod(p)}
-              className={`rounded-full px-4 py-2 text-sm font-medium transition ${period === p ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-              {p === 'today' ? 'Today' : p === 'week' ? 'This week' : 'This month'}
-            </button>
-          ))}
+    <PageShell title="Reports" description="Tap any date to see that day's full report.">
+
+      {/* ── Calendar strip ─────────────────────────────────────────────────── */}
+      <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        {/* Month nav */}
+        <div className="flex items-center justify-between mb-3">
+          <button type="button" onClick={prevMonth}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition text-lg">
+            ‹
+          </button>
+          <span className="text-sm font-semibold text-slate-800">{MONTHS[calMonth]} {calYear}</span>
+          <button type="button" onClick={nextMonth}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 transition text-lg">
+            ›
+          </button>
+        </div>
+
+        {/* Scrollable day strip */}
+        <div ref={stripRef} className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-200">
+          {Array.from({ length: daysInMonth }, (_, i) => {
+            const day = i + 1;
+            const date = new Date(calYear, calMonth, day);
+            const isToday = isSameDay(date, today);
+            const isSelected = isSameDay(date, selectedDate);
+            const isFuture = date > today;
+            return (
+              <button
+                key={day}
+                type="button"
+                data-today={isToday ? 'true' : undefined}
+                disabled={isFuture}
+                onClick={() => setSelectedDate(date)}
+                className={`flex shrink-0 flex-col items-center rounded-xl px-3 py-2 transition
+                  ${isSelected ? 'bg-brand-500 text-white shadow-md shadow-brand-500/30' :
+                    isToday ? 'border-2 border-brand-400 bg-brand-50 text-brand-700' :
+                    isFuture ? 'opacity-30 cursor-not-allowed bg-slate-50 text-slate-400' :
+                    'bg-slate-50 text-slate-700 hover:bg-brand-50 hover:text-brand-700'}`}
+              >
+                <span className="text-[10px] font-medium uppercase tracking-wide">{WEEKDAY[date.getDay()]}</span>
+                <span className="mt-0.5 text-base font-bold">{day}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* ── Selected date header ───────────────────────────────────────────── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-brand-600">Showing report for</p>
+          <p className="text-lg font-bold text-slate-900">{dateLabel}</p>
         </div>
         {!loading && !error && (
           <button type="button" onClick={handlePrint}
@@ -171,8 +240,9 @@ export default function ReportsPage() {
         )}
       </div>
 
+      {/* ── Report content ─────────────────────────────────────────────────── */}
       {loading ? (
-        <div className="rounded-xl border border-dashed border-slate-200 p-10 text-center text-slate-500">Loading reports...</div>
+        <div className="rounded-xl border border-dashed border-slate-200 p-10 text-center text-slate-500">Loading report…</div>
       ) : error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>
       ) : (
@@ -208,70 +278,76 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-3">
-            {/* Best selling products */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5">
-              <h3 className="font-semibold text-slate-900">Best sellers</h3>
-              {topProducts.length === 0 ? (
-                <p className="mt-4 text-sm text-slate-400">No sales in this period.</p>
-              ) : (
-                <div className="mt-4 space-y-2">
-                  {topProducts.map((p, i) => (
-                    <div key={p.name} className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs font-bold text-slate-400 w-4">{i + 1}</span>
-                        <p className="text-sm text-slate-800 truncate">{p.name}</p>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-semibold text-slate-900">{fmt(p.revenue)}</p>
-                        <p className="text-xs text-slate-400">{p.qty} units</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+          {stats.transactions === 0 && expenses.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-slate-500">
+              No activity recorded on this date.
             </div>
+          ) : (
+            <div className="grid gap-6 lg:grid-cols-3">
+              {/* Best selling products */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <h3 className="font-semibold text-slate-900">Best sellers</h3>
+                {topProducts.length === 0 ? (
+                  <p className="mt-4 text-sm text-slate-400">No sales on this date.</p>
+                ) : (
+                  <div className="mt-4 space-y-2">
+                    {topProducts.map((p, i) => (
+                      <div key={p.name} className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-xs font-bold text-slate-400 w-4">{i + 1}</span>
+                          <p className="text-sm text-slate-800 truncate">{p.name}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-semibold text-slate-900">{fmt(p.revenue)}</p>
+                          <p className="text-xs text-slate-400">{p.qty} units</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-            {/* Top customers */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5">
-              <h3 className="font-semibold text-slate-900">Top customers</h3>
-              {topCustomers.length === 0 ? (
-                <p className="mt-4 text-sm text-slate-400">No named customers in this period.</p>
-              ) : (
-                <div className="mt-4 space-y-2">
-                  {topCustomers.map((c, i) => (
-                    <div key={c.name} className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-xs font-bold text-slate-400 w-4">{i + 1}</span>
-                        <p className="text-sm text-slate-800 truncate">{c.name}</p>
+              {/* Top customers */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <h3 className="font-semibold text-slate-900">Top customers</h3>
+                {topCustomers.length === 0 ? (
+                  <p className="mt-4 text-sm text-slate-400">No named customers.</p>
+                ) : (
+                  <div className="mt-4 space-y-2">
+                    {topCustomers.map((c, i) => (
+                      <div key={c.name} className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-xs font-bold text-slate-400 w-4">{i + 1}</span>
+                          <p className="text-sm text-slate-800 truncate">{c.name}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-semibold text-slate-900">{fmt(c.total)}</p>
+                          <p className="text-xs text-slate-400">{c.count} orders</p>
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <p className="text-sm font-semibold text-slate-900">{fmt(c.total)}</p>
-                        <p className="text-xs text-slate-400">{c.count} orders</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
-            {/* Expenses by category */}
-            <div className="rounded-2xl border border-slate-200 bg-white p-5">
-              <h3 className="font-semibold text-slate-900">Expenses by category</h3>
-              {expensesByCategory.length === 0 ? (
-                <p className="mt-4 text-sm text-slate-400">No expenses in this period.</p>
-              ) : (
-                <div className="mt-4 space-y-2">
-                  {expensesByCategory.map(([cat, total]) => (
-                    <div key={cat} className="flex items-center justify-between gap-3">
-                      <p className="text-sm text-slate-700 capitalize">{cat.replace('_', ' ')}</p>
-                      <p className="text-sm font-semibold text-red-600">{fmt(total)}</p>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Expenses by category */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                <h3 className="font-semibold text-slate-900">Expenses by category</h3>
+                {expensesByCategory.length === 0 ? (
+                  <p className="mt-4 text-sm text-slate-400">No expenses on this date.</p>
+                ) : (
+                  <div className="mt-4 space-y-2">
+                    {expensesByCategory.map(([cat, total]) => (
+                      <div key={cat} className="flex items-center justify-between gap-3">
+                        <p className="text-sm text-slate-700 capitalize">{cat.replace(/_/g, ' ')}</p>
+                        <p className="text-sm font-semibold text-red-600">{fmt(total)}</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </PageShell>

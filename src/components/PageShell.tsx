@@ -11,6 +11,8 @@ const navItems = [
   { label: 'Overview', path: '/dashboard' },
   { label: 'Inventory', path: '/products' },
   { label: 'Sales', path: '/sales' },
+  { label: 'Receipts', path: '/receipts' },
+  { label: 'Expenses', path: '/expenses' },
   { label: 'Reports', path: '/reports' },
   { label: 'Staff', path: '/staff' },
   { label: 'Suppliers', path: '/suppliers' },
