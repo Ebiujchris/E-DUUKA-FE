@@ -5,7 +5,6 @@ import DashboardPage from './pages/DashboardPage';
 import ProductsPage from './pages/ProductsPage';
 import SalesPage from './pages/SalesPage';
 import ReportsPage from './pages/ReportsPage';
-import CalendarPage from './pages/CalendarPage';
 import StaffPage from './pages/StaffPage';
 import SuppliersPage from './pages/SuppliersPage';
 
@@ -60,14 +59,6 @@ export default function App() {
         element={
           <ProtectedRoute>
             <ReportsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/calendar"
-        element={
-          <ProtectedRoute>
-            <CalendarPage />
           </ProtectedRoute>
         }
       />

@@ -14,7 +14,6 @@ const navItems = [
   { label: 'Reports', path: '/reports' },
   { label: 'Staff', path: '/staff' },
   { label: 'Suppliers', path: '/suppliers' },
-  { label: 'Calendar', path: '/calendar' },
 ];
 
 
