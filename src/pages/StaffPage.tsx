@@ -107,9 +107,9 @@ export default function StaffPage() {
 
   return (
     <PageShell title="Staff" description="Manage your team, roles and access permissions.">
-      <div className="grid gap-6 lg:grid-cols-[420px,1fr]">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-center">
         {/* Add staff form */}
-        <div className="w-full max-w-md">
+        <div className="w-full lg:w-[400px] lg:shrink-0">
         <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
           <h2 className="text-lg font-semibold text-slate-900">Add staff member</h2>
           <div className="mt-4 space-y-3">
@@ -142,7 +142,7 @@ export default function StaffPage() {
         </div>
 
         {/* Staff list */}
-        <div className="rounded-2xl border border-slate-200 p-5">
+        <div className="rounded-2xl border border-slate-200 p-5 w-full lg:max-w-xl">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-900">Team</h2>
             <span className="text-sm text-slate-500">{filtered.length} of {staff.length} members</span>

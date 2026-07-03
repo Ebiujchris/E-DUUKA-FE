@@ -158,10 +158,10 @@ export default function SalesPage() {
 
   return (
     <PageShell title="Sales" description="Build a cart, then checkout all items at once.">
-      <div className="grid gap-6 lg:grid-cols-[420px,1fr]">
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-center">
 
         {/* ── Left: Cart builder ── */}
-        <div className="space-y-4 w-full max-w-md">
+        <div className="space-y-4 w-full lg:w-[400px] lg:shrink-0">
           {/* Item picker */}
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
             <h2 className="text-lg font-semibold text-slate-900">Add item to cart</h2>
@@ -244,7 +244,7 @@ export default function SalesPage() {
         </div>
 
         {/* ── Right: Sales history ── */}
-        <div className="rounded-2xl border border-slate-200 p-5">
+        <div className="rounded-2xl border border-slate-200 p-5 w-full lg:max-w-xl">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-900">Transactions</h2>
             <span className="text-sm text-slate-500">{filteredSales.length} of {sales.length}</span>
