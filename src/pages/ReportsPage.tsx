@@ -327,20 +327,126 @@ export default function ReportsPage() {
 
   const handlePrint = () => {
     const active = sales.filter((s) => s.status !== 'voided');
-    const revenue = active.reduce((sum, s) => sum + Number(s.totalAmount), 0);
-    const profit = active.reduce((sum, s) => (Number(s.unitPrice) - Number(s.product?.buyingPrice ?? 0)) * Number(s.quantity) + sum, 0);
+    const revenue      = active.reduce((sum, s) => sum + Number(s.totalAmount), 0);
+    const profit       = active.reduce((sum, s) => (Number(s.unitPrice) - Number(s.product?.buyingPrice ?? 0)) * Number(s.quantity) + sum, 0);
     const totalExpenses = expenses.reduce((sum, e) => sum + Number(e.amount), 0);
-    printHtml(`
+    const netProfit    = profit - totalExpenses;
+    const cashSales    = active.filter((s) => s.paymentType === 'cash').reduce((sum, s) => sum + Number(s.totalAmount), 0);
+    const creditSales  = active.filter((s) => s.paymentType === 'credit').reduce((sum, s) => sum + Number(s.totalAmount), 0);
+    const mobileSales  = active.filter((s) => s.paymentType === 'mobile_money').reduce((sum, s) => sum + Number(s.totalAmount), 0);
+
+    // Top products
+    const prodMap: Record<string, { name: string; qty: number; revenue: number }> = {};
+    active.forEach((s) => {
+      const name = s.product?.name ?? 'Unknown';
+      if (!prodMap[name]) prodMap[name] = { name, qty: 0, revenue: 0 };
+      prodMap[name].qty += Number(s.quantity);
+      prodMap[name].revenue += Number(s.totalAmount);
+    });
+    const topProds = Object.values(prodMap).sort((a, b) => b.revenue - a.revenue);
+
+    // Top customers
+    const custMap: Record<string, { name: string; total: number; count: number }> = {};
+    active.filter((s) => s.customerName).forEach((s) => {
+      const name = s.customerName!;
+      if (!custMap[name]) custMap[name] = { name, total: 0, count: 0 };
+      custMap[name].total += Number(s.totalAmount);
+      custMap[name].count += 1;
+    });
+    const topCusts = Object.values(custMap).sort((a, b) => b.total - a.total);
+
+    // Expense category breakdown
+    const expCatMap: Record<string, number> = {};
+    expenses.forEach((e) => { expCatMap[e.category] = (expCatMap[e.category] ?? 0) + Number(e.amount); });
+    const expCats = Object.entries(expCatMap).sort((a, b) => b[1] - a[1]);
+
+    // All sales rows — sorted newest first
+    const salesRows = [...active]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .map((s) => `
+        <tr>
+          <td>${new Date(s.createdAt).toLocaleString()}</td>
+          <td>${s.product?.name ?? '—'}</td>
+          <td class="right">${s.quantity}</td>
+          <td class="right">${fmt(s.unitPrice)}</td>
+          <td class="right">${fmt(s.totalAmount)}</td>
+          <td>${s.customerName ?? 'Walk-in'}</td>
+          <td style="text-transform:capitalize">${s.paymentType.replace('_', ' ')}</td>
+        </tr>`).join('');
+
+    // All expenses rows — sorted newest first
+    const expRows = [...expenses]
+      .sort((a, b) => new Date(b.expenseDate).getTime() - new Date(a.expenseDate).getTime())
+      .map((e) => `
+        <tr>
+          <td>${new Date(e.expenseDate).toLocaleDateString()}</td>
+          <td style="text-transform:capitalize">${e.category.replace(/_/g, ' ')}</td>
+          <td>${e.description ?? '—'}</td>
+          <td class="right red">${fmt(e.amount)}</td>
+        </tr>`).join('');
+
+    const html = `
       <h1>E-DUUKA — ${viewMode.charAt(0).toUpperCase() + viewMode.slice(1)} Report</h1>
       <p class="meta">Period: ${periodLabel} &nbsp;·&nbsp; Generated: ${new Date().toLocaleString()}</p>
+
       <div class="summary">
         <div class="card"><div class="label">Revenue</div><div class="value">${fmt(revenue)}</div></div>
         <div class="card"><div class="label">Gross Profit</div><div class="value green">${fmt(profit)}</div></div>
         <div class="card"><div class="label">Expenses</div><div class="value red">${fmt(totalExpenses)}</div></div>
-        <div class="card"><div class="label">Net Profit</div><div class="value ${profit - totalExpenses >= 0 ? 'green' : 'red'}">${fmt(profit - totalExpenses)}</div></div>
+        <div class="card"><div class="label">Net Profit</div><div class="value ${netProfit >= 0 ? 'green' : 'red'}">${fmt(netProfit)}</div></div>
       </div>
+
+      <h2>Payment Breakdown</h2>
+      <table>
+        <tr><th>Type</th><th class="right">Amount</th><th class="right">Transactions</th></tr>
+        <tr><td>Cash</td><td class="right">${fmt(cashSales)}</td><td class="right">${active.filter(s=>s.paymentType==='cash').length}</td></tr>
+        <tr><td>Credit</td><td class="right">${fmt(creditSales)}</td><td class="right">${active.filter(s=>s.paymentType==='credit').length}</td></tr>
+        <tr><td>Mobile Money</td><td class="right">${fmt(mobileSales)}</td><td class="right">${active.filter(s=>s.paymentType==='mobile_money').length}</td></tr>
+        <tr><td><strong>Total</strong></td><td class="right"><strong>${fmt(revenue)}</strong></td><td class="right"><strong>${active.length}</strong></td></tr>
+      </table>
+
+      ${topProds.length ? `
+      <h2>Products Sold</h2>
+      <table>
+        <tr><th>#</th><th>Product</th><th class="right">Units Sold</th><th class="right">Revenue</th></tr>
+        ${topProds.map((p, i) => `<tr><td>${i+1}</td><td>${p.name}</td><td class="right">${p.qty}</td><td class="right">${fmt(p.revenue)}</td></tr>`).join('')}
+      </table>` : ''}
+
+      ${topCusts.length ? `
+      <h2>Customers</h2>
+      <table>
+        <tr><th>#</th><th>Customer</th><th class="right">Orders</th><th class="right">Total Spent</th></tr>
+        ${topCusts.map((c, i) => `<tr><td>${i+1}</td><td>${c.name}</td><td class="right">${c.count}</td><td class="right">${fmt(c.total)}</td></tr>`).join('')}
+      </table>` : ''}
+
+      ${active.length ? `
+      <h2>All Sales (${active.length})</h2>
+      <table>
+        <tr><th>Date & Time</th><th>Product</th><th class="right">Qty</th><th class="right">Unit Price</th><th class="right">Total</th><th>Customer</th><th>Payment</th></tr>
+        ${salesRows}
+        <tr><td colspan="4"><strong>Total Revenue</strong></td><td class="right"><strong>${fmt(revenue)}</strong></td><td colspan="2"></td></tr>
+      </table>` : ''}
+
+      ${expCats.length ? `
+      <h2>Expenses by Category</h2>
+      <table>
+        <tr><th>Category</th><th class="right">Amount</th></tr>
+        ${expCats.map(([cat, total]) => `<tr><td style="text-transform:capitalize">${cat.replace(/_/g,' ')}</td><td class="right red">${fmt(total)}</td></tr>`).join('')}
+        <tr><td><strong>Total</strong></td><td class="right red"><strong>${fmt(totalExpenses)}</strong></td></tr>
+      </table>` : ''}
+
+      ${expenses.length ? `
+      <h2>All Expenses (${expenses.length})</h2>
+      <table>
+        <tr><th>Date</th><th>Category</th><th>Description</th><th class="right">Amount</th></tr>
+        ${expRows}
+        <tr><td colspan="3"><strong>Total Expenses</strong></td><td class="right red"><strong>${fmt(totalExpenses)}</strong></td></tr>
+      </table>` : ''}
+
       <p class="footer">E-DUUKA Shop Management &nbsp;·&nbsp; ${new Date().getFullYear()}</p>
-    `, `E-DUUKA ${viewMode} report — ${periodLabel}`);
+    `;
+
+    printHtml(html, `E-DUUKA ${viewMode} report — ${periodLabel}`);
   };
 
   return (
