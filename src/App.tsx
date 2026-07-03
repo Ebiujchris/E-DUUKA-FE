@@ -12,6 +12,7 @@ import ReceiptsPage from './pages/ReceiptsPage';
 import CreditsPage from './pages/CreditsPage';
 import RestockPage from './pages/RestockPage';
 import SettingsPage from './pages/SettingsPage';
+import BalanceSheetPage from './pages/BalanceSheetPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -88,7 +89,8 @@ export default function App() {
       <Route path="/credits"  element={<ProtectedRoute><CreditsPage /></ProtectedRoute>} />
       <Route path="/restock"  element={<ProtectedRoute><RestockPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route path="/balance-sheet" element={<ProtectedRoute><BalanceSheetPage /></ProtectedRoute>} />
+      <Route path="*" element={<Navigate to="/" replace />} />} />
     </Routes>
   );
 }

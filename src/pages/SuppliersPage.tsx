@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import PageShell from '../components/PageShell';
 import { useAuth } from '../context/AuthContext';
 import { API_URL } from '../lib/api';
+import { useToast } from '../components/Toast';
 
 interface Supplier {
   id: string;
@@ -27,9 +28,9 @@ interface PurchaseOrder {
 
 const formatCurrency = (n: number) =>
   `UGX ${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
-
 export default function SuppliersPage() {
   const { user } = useAuth();
+  const toast = useToast();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [orders, setOrders] = useState<PurchaseOrder[]>([]);
@@ -38,6 +39,12 @@ export default function SuppliersPage() {
   const [search, setSearch] = useState('');
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  // Supplier debt payment state
+  const [payingId, setPayingId] = useState<string | null>(null);
+  const [payAmount, setPayAmount] = useState('');
+  const [addDebtId, setAddDebtId] = useState<string | null>(null);
+  const [addDebtAmount, setAddDebtAmount] = useState('');
 
   const [supplierForm, setSupplierForm] = useState({ name: '', phone: '', email: '', address: '', notes: '' });
   const [orderForm, setOrderForm] = useState({ supplierId: '', productId: '', quantity: '', unitCost: '', notes: '' });
@@ -109,6 +116,40 @@ export default function SuppliersPage() {
     if (!confirm('Remove this supplier?')) return;
     await fetch(`${API_URL}/suppliers/${id}`, { method: 'DELETE', headers: authHeader });
     await load();
+  };
+
+  const handlePaySupplier = async (id: string) => {
+    const amount = Number(payAmount);
+    if (!amount || amount <= 0) { setError('Enter a valid payment amount'); return; }
+    try {
+      const res = await fetch(`${API_URL}/suppliers/${id}/pay`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ amount }),
+      });
+      const payload = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(payload.message || 'Payment failed');
+      toast.success(`Payment of ${formatCurrency(amount)} recorded`);
+      setPayingId(null); setPayAmount('');
+      await load();
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
+  };
+
+  const handleAddDebt = async (id: string) => {
+    const amount = Number(addDebtAmount);
+    if (!amount || amount <= 0) { setError('Enter a valid amount'); return; }
+    const supplier = suppliers.find(s => s.id === id);
+    try {
+      const res = await fetch(`${API_URL}/suppliers/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ totalOwed: Number(supplier?.totalOwed ?? 0) + amount }),
+      });
+      if (!res.ok) throw new Error('Failed to update debt');
+      toast.success('Debt recorded');
+      setAddDebtId(null); setAddDebtAmount('');
+      await load();
+    } catch (err) { setError(err instanceof Error ? err.message : 'Failed'); }
   };
 
   const filteredSuppliers = useMemo(() =>
@@ -190,7 +231,7 @@ export default function SuppliersPage() {
             ) : (
               <div className="mt-4 max-h-[520px] overflow-y-auto space-y-2 pr-1">
                 {filteredSuppliers.map((s) => (
-                  <div key={s.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                  <div key={s.id} className={`rounded-xl border p-3 ${Number(s.totalOwed) > 0 ? 'border-red-200 bg-red-50' : 'border-slate-200 bg-slate-50'}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="font-medium text-slate-900">{s.name}</p>
@@ -198,9 +239,47 @@ export default function SuppliersPage() {
                         {s.address && <p className="text-xs text-slate-400">{s.address}</p>}
                       </div>
                       <div className="shrink-0 text-right">
-                        {Number(s.totalOwed) > 0 && <p className="text-sm font-semibold text-red-600">{formatCurrency(s.totalOwed)} owed</p>}
-                        <button type="button" onClick={() => handleDeleteSupplier(s.id)} className="text-xs text-red-400 hover:text-red-600">Remove</button>
+                        {Number(s.totalOwed) > 0
+                          ? <p className="text-sm font-bold text-red-600">{formatCurrency(s.totalOwed)} owed</p>
+                          : <p className="text-xs text-emerald-600 font-medium">✓ Clear</p>
+                        }
+                        <button type="button" onClick={() => handleDeleteSupplier(s.id)} className="text-xs text-red-400 hover:text-red-600 mt-1">Remove</button>
                       </div>
+                    </div>
+                    {/* Debt actions */}
+                    <div className="mt-2 border-t border-slate-200 pt-2 flex flex-wrap gap-2">
+                      {payingId === s.id ? (
+                        <div className="flex items-center gap-2 w-full">
+                          <input type="number" min="1" autoFocus placeholder="Amount paid"
+                            className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm focus:border-emerald-400 focus:outline-none"
+                            value={payAmount} onChange={e => setPayAmount(e.target.value)} />
+                          <button type="button" onClick={() => handlePaySupplier(s.id)}
+                            className="rounded-xl bg-emerald-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-600">Confirm</button>
+                          <button type="button" onClick={() => setPayingId(null)} className="text-xs text-slate-400">Cancel</button>
+                        </div>
+                      ) : addDebtId === s.id ? (
+                        <div className="flex items-center gap-2 w-full">
+                          <input type="number" min="1" autoFocus placeholder="Debt amount"
+                            className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm focus:border-red-400 focus:outline-none"
+                            value={addDebtAmount} onChange={e => setAddDebtAmount(e.target.value)} />
+                          <button type="button" onClick={() => handleAddDebt(s.id)}
+                            className="rounded-xl bg-red-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600">Add</button>
+                          <button type="button" onClick={() => setAddDebtId(null)} className="text-xs text-slate-400">Cancel</button>
+                        </div>
+                      ) : (
+                        <>
+                          {Number(s.totalOwed) > 0 && (
+                            <button type="button" onClick={() => { setPayingId(s.id); setPayAmount(''); setAddDebtId(null); }}
+                              className="rounded-xl border border-emerald-300 px-3 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-50">
+                              Record payment
+                            </button>
+                          )}
+                          <button type="button" onClick={() => { setAddDebtId(s.id); setAddDebtAmount(''); setPayingId(null); }}
+                            className="rounded-xl border border-red-200 px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50">
+                            + Add debt
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}

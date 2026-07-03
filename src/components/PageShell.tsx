@@ -16,8 +16,9 @@ const navItems = [
   { label: 'Inventory', path: '/products' },
   { label: 'Restock',   path: '/restock' },
   { label: 'Expenses',  path: '/expenses' },
-  { label: 'Reports',   path: '/reports' },
-  { label: 'Suppliers', path: '/suppliers' },
+  { label: 'Reports',    path: '/reports' },
+  { label: 'Financials', path: '/balance-sheet' },
+  { label: 'Suppliers',  path: '/suppliers' },
   { label: 'Staff',     path: '/staff' },
   { label: 'Settings',  path: '/settings' },
 ];
