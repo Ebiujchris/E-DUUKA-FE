@@ -18,18 +18,36 @@ interface SaleItem {
   status?: string;
   createdAt: string;
 }
+interface CartItem {
+  key: string;
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+}
 
 const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
 
 export default function SalesPage() {
   const { user } = useAuth();
   const toast = useToast();
+
+  // Cart state
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cartCustomer, setCartCustomer] = useState('');
+  const [cartPayment, setCartPayment] = useState('cash');
   const [submitting, setSubmitting] = useState(false);
+
+  // Item picker
+  const [pickerProductId, setPickerProductId] = useState('');
+  const [pickerQty, setPickerQty] = useState('1');
+  const [pickerPrice, setPickerPrice] = useState('');
+
+  // History filters
   const [filter, setFilter] = useState<'all' | 'cash' | 'credit'>('all');
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 6;
-  const [form, setForm] = useState({ productId: '', quantity: '1', unitPrice: '', paymentType: 'cash', customerName: '' });
 
   const { data: products = [], loading: prodLoading } = useFetch<ProductItem[]>(
     () => fetch(`${API_URL}/products`, { headers: authHeader() }).then((r) => r.json()),
@@ -44,36 +62,84 @@ export default function SalesPage() {
     [user?.id],
   );
 
-  const loading = prodLoading || salesLoading;
+  // Auto-fill price when product selected
+  const handlePickerProduct = (id: string) => {
+    setPickerProductId(id);
+    const p = products.find((x) => x.id === id);
+    if (p) setPickerPrice(String(p.sellingPrice));
+  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!form.productId || !form.unitPrice) { toast.error('Fill in all required fields'); return; }
+  const addToCart = () => {
+    if (!pickerProductId || !pickerPrice || !pickerQty) { toast.error('Select a product, quantity and price'); return; }
+    const product = products.find((p) => p.id === pickerProductId);
+    if (!product) return;
+    const qty = Number(pickerQty);
+    const price = Number(pickerPrice);
+    // If same product already in cart, increase quantity
+    setCart((prev) => {
+      const existing = prev.find((c) => c.productId === pickerProductId && c.unitPrice === price);
+      if (existing) {
+        return prev.map((c) =>
+          c.key === existing.key ? { ...c, quantity: c.quantity + qty } : c,
+        );
+      }
+      return [...prev, { key: `${pickerProductId}-${Date.now()}`, productId: pickerProductId, productName: product.name, quantity: qty, unitPrice: price }];
+    });
+    setPickerProductId('');
+    setPickerQty('1');
+    setPickerPrice('');
+  };
+
+  const removeFromCart = (key: string) => setCart((prev) => prev.filter((c) => c.key !== key));
+
+  const updateCartQty = (key: string, qty: number) => {
+    if (qty < 1) { removeFromCart(key); return; }
+    setCart((prev) => prev.map((c) => c.key === key ? { ...c, quantity: qty } : c));
+  };
+
+  const cartTotal = cart.reduce((sum, c) => sum + c.quantity * c.unitPrice, 0);
+
+  const handleCheckout = async () => {
+    if (cart.length === 0) { toast.error('Cart is empty'); return; }
     setSubmitting(true);
     try {
-      const res = await fetch(`${API_URL}/sales`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeader() },
-        body: JSON.stringify({
-          productId: form.productId,
-          quantity: Number(form.quantity),
-          unitPrice: Number(form.unitPrice),
-          paymentType: form.paymentType,
-          customerName: form.customerName.trim() || 'Walk-in customer',
-          userId: user?.id,
-        }),
-      });
-      const payload = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(Array.isArray(payload.message) ? payload.message[0] : payload.message || 'Failed');
-      toast.success('Sale recorded');
-      bustCache('/sales');
-      bustCache('/products');
-      bustCache('/dashboard');
-      setForm({ productId: '', quantity: '1', unitPrice: '', paymentType: 'cash', customerName: '' });
-      setPage(1);
+      const results = await Promise.allSettled(
+        cart.map((item) =>
+          fetch(`${API_URL}/sales`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...authHeader() },
+            body: JSON.stringify({
+              productId: item.productId,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              paymentType: cartPayment,
+              customerName: cartCustomer.trim() || 'Walk-in customer',
+              userId: user?.id,
+            }),
+          }).then(async (r) => {
+            const payload = await r.json().catch(() => ({}));
+            if (!r.ok) throw new Error(payload.message || 'Failed');
+            return payload;
+          }),
+        ),
+      );
+
+      const failed = results.filter((r) => r.status === 'rejected') as PromiseRejectedResult[];
+      const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+
+      if (failed.length === 0) {
+        toast.success(`${succeeded} item${succeeded > 1 ? 's' : ''} sold — ${fmt(cartTotal)}`);
+        setCart([]);
+        setCartCustomer('');
+        setCartPayment('cash');
+      } else {
+        toast.error(`${succeeded} sold, ${failed.length} failed: ${failed[0].reason?.message}`);
+      }
+
+      bustCache('/sales'); bustCache('/products'); bustCache('/dashboard');
       reload();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to record sale');
+      toast.error(err instanceof Error ? err.message : 'Checkout failed');
     } finally {
       setSubmitting(false);
     }
@@ -88,31 +154,96 @@ export default function SalesPage() {
 
   const visibleSales = filteredSales.slice(0, page * PAGE_SIZE);
   const hasMore = visibleSales.length < filteredSales.length;
+  const loading = prodLoading || salesLoading;
 
   return (
-    <PageShell title="Sales" description="Record sales quickly and review recent transactions.">
-      <div className="grid gap-6 lg:grid-cols-[0.9fr,1.1fr]">
-        <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-          <h2 className="text-lg font-semibold text-slate-900">Record a sale</h2>
-          <div className="mt-4 space-y-3">
-            <select className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2" value={form.productId} onChange={(e) => setForm({ ...form, productId: e.target.value })} required>
-              <option value="">Select a product</option>
-              {products.map((p) => <option key={p.id} value={p.id}>{p.name} · stock {p.stockQuantity}</option>)}
-            </select>
-            <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2" placeholder="Quantity" type="number" min="1" value={form.quantity} onChange={(e) => setForm({ ...form, quantity: e.target.value })} required />
-            <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2" placeholder="Unit price" type="number" value={form.unitPrice} onChange={(e) => setForm({ ...form, unitPrice: e.target.value })} required />
-            <select className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2" value={form.paymentType} onChange={(e) => setForm({ ...form, paymentType: e.target.value })}>
-              <option value="cash">Cash</option>
-              <option value="credit">Credit</option>
-              <option value="mobile_money">Mobile Money</option>
-            </select>
-            <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2" placeholder="Buyer name (optional)" value={form.customerName} onChange={(e) => setForm({ ...form, customerName: e.target.value })} />
-            <button className="rounded-xl bg-brand-500 px-4 py-2.5 font-semibold text-white disabled:opacity-60 transition" type="submit" disabled={submitting}>
-              {submitting ? 'Recording…' : 'Record sale'}
-            </button>
-          </div>
-        </form>
+    <PageShell title="Sales" description="Build a cart, then checkout all items at once.">
+      <div className="grid gap-6 lg:grid-cols-[1fr,1fr]">
 
+        {/* ── Left: Cart builder ── */}
+        <div className="space-y-4">
+          {/* Item picker */}
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+            <h2 className="text-lg font-semibold text-slate-900">Add item to cart</h2>
+            <div className="mt-4 space-y-3">
+              <select
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                value={pickerProductId}
+                onChange={(e) => handlePickerProduct(e.target.value)}
+              >
+                <option value="">Select a product</option>
+                {products.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name} · stock {p.stockQuantity}</option>
+                ))}
+              </select>
+              <div className="grid grid-cols-2 gap-3">
+                <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Quantity" type="number" min="1" value={pickerQty} onChange={(e) => setPickerQty(e.target.value)} />
+                <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Unit price" type="number" value={pickerPrice} onChange={(e) => setPickerPrice(e.target.value)} />
+              </div>
+              <button type="button" onClick={addToCart} className="w-full rounded-xl border-2 border-dashed border-brand-300 py-2.5 text-sm font-semibold text-brand-600 hover:bg-brand-50 transition">
+                + Add to cart
+              </button>
+            </div>
+          </div>
+
+          {/* Cart */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-slate-900">Cart</h2>
+              {cart.length > 0 && (
+                <button type="button" onClick={() => setCart([])} className="text-xs text-red-400 hover:text-red-600">Clear all</button>
+              )}
+            </div>
+
+            {cart.length === 0 ? (
+              <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
+                No items yet. Add products above.
+              </div>
+            ) : (
+              <div className="mt-4 space-y-2">
+                {cart.map((item) => (
+                  <div key={item.key} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-slate-900">{item.productName}</p>
+                      <p className="text-xs text-slate-500">{fmt(item.unitPrice)} each</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <button type="button" onClick={() => updateCartQty(item.key, item.quantity - 1)} className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 text-sm font-bold">−</button>
+                      <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
+                      <button type="button" onClick={() => updateCartQty(item.key, item.quantity + 1)} className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 text-sm font-bold">+</button>
+                      <span className="w-20 text-right text-sm font-semibold text-slate-900">{fmt(item.quantity * item.unitPrice)}</span>
+                      <button type="button" onClick={() => removeFromCart(item.key)} className="ml-1 text-red-400 hover:text-red-600 text-xs">✕</button>
+                    </div>
+                  </div>
+                ))}
+
+                {/* Total */}
+                <div className="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 font-semibold">
+                  <span className="text-sm text-slate-700">{cart.reduce((s, c) => s + c.quantity, 0)} items</span>
+                  <span className="text-base text-slate-900">{fmt(cartTotal)}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Checkout form */}
+            {cart.length > 0 && (
+              <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
+                <input className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Customer name (optional)" value={cartCustomer} onChange={(e) => setCartCustomer(e.target.value)} />
+                <select className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm" value={cartPayment} onChange={(e) => setCartPayment(e.target.value)}>
+                  <option value="cash">Cash</option>
+                  <option value="credit">Credit</option>
+                  <option value="mobile_money">Mobile Money</option>
+                </select>
+                <button type="button" onClick={handleCheckout} disabled={submitting}
+                  className="w-full rounded-xl bg-brand-500 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/20 disabled:opacity-60 transition hover:bg-brand-600">
+                  {submitting ? 'Processing…' : `Checkout — ${fmt(cartTotal)}`}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Right: Sales history ── */}
         <div className="rounded-2xl border border-slate-200 p-5">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-slate-900">Transactions</h2>
@@ -145,7 +276,7 @@ export default function SalesPage() {
               </div>
             ) : (
               <>
-                <div className="mt-4 max-h-[480px] overflow-y-auto space-y-2 pr-1">
+                <div className="mt-4 max-h-[520px] overflow-y-auto space-y-2 pr-1">
                   {visibleSales.map((sale) => {
                     const isCredit = sale.paymentType === 'credit';
                     return (
