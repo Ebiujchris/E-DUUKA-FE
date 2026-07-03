@@ -69,7 +69,15 @@ export default function StaffPage() {
       const res = await fetch(`${API_URL}/staff`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader },
-        body: JSON.stringify({ ...form, salary: form.salary ? Number(form.salary) : undefined }),
+        body: JSON.stringify({
+          name: form.name,
+          phone: form.phone,
+          role: form.role,
+          salary: form.salary ? Number(form.salary) : undefined,
+          canAccessInventory: form.canAccessInventory,
+          canApproveCredits: form.canApproveCredits,
+          canViewReports: form.canViewReports,
+        }),
       });
       const payload = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(payload.message || 'Failed to add staff');
@@ -99,8 +107,9 @@ export default function StaffPage() {
 
   return (
     <PageShell title="Staff" description="Manage your team, roles and access permissions.">
-      <div className="grid gap-6 lg:grid-cols-[0.9fr,1.1fr]">
+      <div className="grid gap-6 lg:grid-cols-[420px,1fr]">
         {/* Add staff form */}
+        <div className="w-full max-w-md">
         <form onSubmit={handleSubmit} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
           <h2 className="text-lg font-semibold text-slate-900">Add staff member</h2>
           <div className="mt-4 space-y-3">
@@ -125,11 +134,12 @@ export default function StaffPage() {
                 </label>
               ))}
             </div>
-            <button className="rounded-xl bg-brand-500 px-4 py-2.5 font-semibold text-white" type="submit">Add staff</button>
+            <button className="rounded-xl bg-brand-500 px-5 py-2.5 font-semibold text-white" type="submit">Add staff</button>
           </div>
           {message && <p className="mt-4 text-sm text-emerald-600">{message}</p>}
           {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
         </form>
+        </div>
 
         {/* Staff list */}
         <div className="rounded-2xl border border-slate-200 p-5">
