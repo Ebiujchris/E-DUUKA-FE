@@ -99,7 +99,7 @@ export default function LoginForm({ onSuccess, onSwitchToRegister }: LoginFormPr
     } finally { setLoading(false); }
   };
 
-  const back = () => { setStep('login'); setError(''); setInfo(''); setDevCode(''); };
+  const back = () => { setStep('login'); setError(''); setInfo(''); };
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
