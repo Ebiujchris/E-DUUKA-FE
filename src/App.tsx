@@ -9,6 +9,9 @@ import StaffPage from './pages/StaffPage';
 import SuppliersPage from './pages/SuppliersPage';
 import ExpensesPage from './pages/ExpensesPage';
 import ReceiptsPage from './pages/ReceiptsPage';
+import CreditsPage from './pages/CreditsPage';
+import RestockPage from './pages/RestockPage';
+import SettingsPage from './pages/SettingsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -80,22 +83,11 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route
-        path="/expenses"
-        element={
-          <ProtectedRoute>
-            <ExpensesPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/receipts"
-        element={
-          <ProtectedRoute>
-            <ReceiptsPage />
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/expenses" element={<ProtectedRoute><ExpensesPage /></ProtectedRoute>} />
+      <Route path="/receipts" element={<ProtectedRoute><ReceiptsPage /></ProtectedRoute>} />
+      <Route path="/credits"  element={<ProtectedRoute><CreditsPage /></ProtectedRoute>} />
+      <Route path="/restock"  element={<ProtectedRoute><RestockPage /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

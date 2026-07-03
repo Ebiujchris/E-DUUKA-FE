@@ -8,14 +8,17 @@ interface PageShellProps {
 }
 
 const navItems = [
-  { label: 'Overview', path: '/dashboard' },
-  { label: 'Inventory', path: '/products' },
-  { label: 'Sales', path: '/sales' },
-  { label: 'Receipts', path: '/receipts' },
-  { label: 'Expenses', path: '/expenses' },
-  { label: 'Reports', path: '/reports' },
-  { label: 'Staff', path: '/staff' },
-  { label: 'Suppliers', path: '/suppliers' },
+  { label: 'Overview',   path: '/dashboard' },
+  { label: 'Sales',      path: '/sales' },
+  { label: 'Receipts',   path: '/receipts' },
+  { label: 'Credits',    path: '/credits' },
+  { label: 'Inventory',  path: '/products' },
+  { label: 'Restock',    path: '/restock' },
+  { label: 'Expenses',   path: '/expenses' },
+  { label: 'Reports',    path: '/reports' },
+  { label: 'Suppliers',  path: '/suppliers' },
+  { label: 'Staff',      path: '/staff' },
+  { label: 'Settings',   path: '/settings' },
 ];
 
 
