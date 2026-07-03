@@ -30,7 +30,7 @@ export default function PageShell({ title, description, children }: PageShellPro
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.08),_transparent_32%),linear-gradient(135deg,_#f8fafc_0%,_#eef4ff_100%)]">
       <header className="border-b border-slate-200/80 bg-white/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-screen-xl items-center justify-between px-4 py-3 sm:px-6">
+        <div className="mx-auto flex w-full items-center justify-between px-4 py-3 sm:px-6">
           <div className="flex items-center gap-2.5">
             <Link to="/dashboard" className="flex items-center gap-2.5">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-500 text-lg font-bold text-white shadow-lg shadow-brand-500/20">
@@ -52,7 +52,7 @@ export default function PageShell({ title, description, children }: PageShellPro
         </div>
       </header>
 
-      <div className="mx-auto flex w-full max-w-screen-xl flex-col gap-4 px-0 py-4 lg:flex-row">
+      <div className="flex flex-col gap-4 px-0 py-4 lg:flex-row">
         <aside className="w-full shrink-0 rounded-none border-b border-slate-200/80 bg-white/90 p-4 shadow-sm backdrop-blur lg:w-56 lg:rounded-r-2xl lg:border-b-0 lg:border-r lg:shadow-none">
           <div className="rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 p-3 text-white shadow-lg shadow-brand-500/20">
             <p className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-100">Store hub</p>

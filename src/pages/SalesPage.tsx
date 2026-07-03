@@ -158,10 +158,10 @@ export default function SalesPage() {
 
   return (
     <PageShell title="Sales" description="Build a cart, then checkout all items at once.">
-      <div className="grid gap-6 lg:grid-cols-[1fr,1fr]">
+      <div className="grid gap-6 lg:grid-cols-[420px,1fr]">
 
         {/* ── Left: Cart builder ── */}
-        <div className="space-y-4">
+        <div className="space-y-4 w-full max-w-md">
           {/* Item picker */}
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
             <h2 className="text-lg font-semibold text-slate-900">Add item to cart</h2>
@@ -180,7 +180,7 @@ export default function SalesPage() {
                 <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Quantity" type="number" min="1" value={pickerQty} onChange={(e) => setPickerQty(e.target.value)} />
                 <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Unit price" type="number" value={pickerPrice} onChange={(e) => setPickerPrice(e.target.value)} />
               </div>
-              <button type="button" onClick={addToCart} className="w-full rounded-xl border-2 border-dashed border-brand-300 py-2.5 text-sm font-semibold text-brand-600 hover:bg-brand-50 transition">
+              <button type="button" onClick={addToCart} className="rounded-xl border-2 border-dashed border-brand-300 px-5 py-2 text-sm font-semibold text-brand-600 hover:bg-brand-50 transition">
                 + Add to cart
               </button>
             </div>
@@ -235,7 +235,7 @@ export default function SalesPage() {
                   <option value="mobile_money">Mobile Money</option>
                 </select>
                 <button type="button" onClick={handleCheckout} disabled={submitting}
-                  className="w-full rounded-xl bg-brand-500 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/20 disabled:opacity-60 transition hover:bg-brand-600">
+                  className="rounded-xl bg-brand-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-brand-500/20 disabled:opacity-60 transition hover:bg-brand-600">
                   {submitting ? 'Processing…' : `Checkout — ${fmt(cartTotal)}`}
                 </button>
               </div>
