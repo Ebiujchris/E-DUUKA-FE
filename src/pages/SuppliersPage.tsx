@@ -129,9 +129,9 @@ export default function SuppliersPage() {
 
   return (
     <PageShell title="Suppliers" description="Manage suppliers and track purchase orders.">
-      <div className="grid gap-6 lg:grid-cols-[0.9fr,1.1fr]">
+      <div className="grid gap-6 lg:grid-cols-[420px,1fr]">
         {/* Forms */}
-        <div className="space-y-4">
+        <div className="space-y-4 w-full max-w-md">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
             <h2 className="text-lg font-semibold text-slate-900">Add supplier</h2>
             <form onSubmit={handleAddSupplier} className="mt-4 space-y-3">
@@ -141,7 +141,7 @@ export default function SuppliersPage() {
                 <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2" placeholder="Email" value={supplierForm.email} onChange={(e) => setSupplierForm({ ...supplierForm, email: e.target.value })} />
               </div>
               <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2" placeholder="Address (optional)" value={supplierForm.address} onChange={(e) => setSupplierForm({ ...supplierForm, address: e.target.value })} />
-              <button className="rounded-xl bg-brand-500 px-4 py-2.5 font-semibold text-white" type="submit">Save supplier</button>
+              <button className="rounded-xl bg-brand-500 px-5 py-2.5 font-semibold text-white" type="submit">Save supplier</button>
             </form>
           </div>
 
@@ -160,7 +160,7 @@ export default function SuppliersPage() {
                 <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2" placeholder="Quantity" type="number" min="1" value={orderForm.quantity} onChange={(e) => setOrderForm({ ...orderForm, quantity: e.target.value })} required />
                 <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2" placeholder="Unit cost (UGX)" type="number" value={orderForm.unitCost} onChange={(e) => setOrderForm({ ...orderForm, unitCost: e.target.value })} required />
               </div>
-              <button className="rounded-xl bg-brand-500 px-4 py-2.5 font-semibold text-white" type="submit">Create order</button>
+              <button className="rounded-xl bg-brand-500 px-5 py-2.5 font-semibold text-white" type="submit">Create order</button>
             </form>
           </div>
           {message && <p className="text-sm text-emerald-600">{message}</p>}
