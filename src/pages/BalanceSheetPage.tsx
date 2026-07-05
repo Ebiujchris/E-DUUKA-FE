@@ -24,7 +24,11 @@ interface BalanceSheet {
     supplierBreakdown: SupplierItem[];
     total: number;
   };
-  equity: number;
+  equity: {
+    initialCapital: number;
+    retainedEarnings: number;
+    total: number;
+  };
   incomeStatement: {
     totalRevenue: number;
     grossProfit: number;
@@ -68,20 +72,23 @@ export default function BalanceSheetPage() {
         <tr><th>Item</th><th class="right">Value</th></tr>
         <tr><td>Stock on hand</td><td class="right">${fmt(assets.stockValue)}</td></tr>
         <tr><td>Customer receivables (outstanding credits)</td><td class="right">${fmt(assets.receivables)}</td></tr>
-        <tr><td>Cash revenue (YTD, non-credit)</td><td class="right">${fmt(assets.cashRevenue)}</td></tr>
+        <tr><td>Cash & mobile revenue (YTD)</td><td class="right">${fmt(assets.cashRevenue)}</td></tr>
         <tr><td><strong>Total Assets</strong></td><td class="right"><strong>${fmt(assets.total)}</strong></td></tr>
       </table>
 
       <h2>Liabilities</h2>
       <table>
         <tr><th>Item</th><th class="right">Value</th></tr>
-        <tr><td>Supplier debt (what you owe suppliers)</td><td class="right red">${fmt(liabilities.supplierDebt)}</td></tr>
+        <tr><td>Supplier debt</td><td class="right red">${fmt(liabilities.supplierDebt)}</td></tr>
         <tr><td><strong>Total Liabilities</strong></td><td class="right red"><strong>${fmt(liabilities.total)}</strong></td></tr>
       </table>
 
-      <h2>Equity (Net Worth)</h2>
+      <h2>Equity (Owner's Net Worth)</h2>
       <table>
-        <tr><td><strong>Assets − Liabilities</strong></td><td class="right ${equity >= 0 ? 'green' : 'red'}"><strong>${fmt(equity)}</strong></td></tr>
+        <tr><th>Item</th><th class="right">Value</th></tr>
+        <tr><td>Initial capital invested</td><td class="right">${fmt(equity.initialCapital)}</td></tr>
+        <tr><td>Retained earnings (accumulated profit)</td><td class="right ${equity.retainedEarnings >= 0 ? 'green' : 'red'}">${fmt(equity.retainedEarnings)}</td></tr>
+        <tr><td><strong>Total Equity</strong></td><td class="right ${equity.total >= 0 ? 'green' : 'red'}"><strong>${fmt(equity.total)}</strong></td></tr>
       </table>
 
       <h2>Income Statement (${inc.period})</h2>
@@ -149,7 +156,7 @@ export default function BalanceSheetPage() {
             <span className="text-2xl text-slate-400 font-light">+</span>
             <div>
               <p className="text-xs uppercase tracking-wide font-semibold text-emerald-600">Equity (Net Worth)</p>
-              <p className={`text-2xl font-bold ${bs.equity >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(bs.equity)}</p>
+              <p className={`text-2xl font-bold ${bs.equity.total >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>{fmt(bs.equity.total)}</p>
             </div>
           </div>
 
@@ -240,12 +247,26 @@ export default function BalanceSheetPage() {
               </div>
 
               {/* Equity */}
-              <div className={`rounded-2xl border p-5 ${bs.equity >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}>
-                <h2 className="text-base font-bold text-slate-900 mb-3">Equity (Net Worth)</h2>
-                <p className="text-xs text-slate-500 mb-2">Assets − Liabilities = Equity</p>
-                <p className={`text-3xl font-bold ${bs.equity >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{fmt(bs.equity)}</p>
+              <div className={`rounded-2xl border p-5 ${bs.equity.total >= 0 ? 'border-emerald-200 bg-emerald-50' : 'border-red-200 bg-red-50'}`}>
+                <h2 className="text-base font-bold text-slate-900 mb-3">Equity (Owner's Net Worth)</h2>
+                <div className="space-y-2 mb-3">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-slate-600">Initial capital invested</span>
+                    <span className="font-semibold text-slate-900">{fmt(bs.equity.initialCapital)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-sm border-t border-slate-200 pt-2">
+                    <span className="text-slate-600">Retained earnings (all-time profit)</span>
+                    <span className={`font-semibold ${bs.equity.retainedEarnings >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>
+                      {fmt(bs.equity.retainedEarnings)}
+                    </span>
+                  </div>
+                </div>
+                <div className="border-t border-slate-200 pt-3">
+                  <p className="text-xs text-slate-500 mb-1">Initial Capital + Retained Earnings</p>
+                  <p className={`text-3xl font-bold ${bs.equity.total >= 0 ? 'text-emerald-700' : 'text-red-600'}`}>{fmt(bs.equity.total)}</p>
+                </div>
                 <p className="text-xs text-slate-500 mt-2">
-                  {bs.equity >= 0 ? 'Your shop has positive net worth.' : 'Liabilities exceed assets — review supplier debt.'}
+                  {bs.equity.total >= 0 ? 'Positive net worth — shop is profitable.' : 'Negative equity — review expenses and debts.'}
                 </p>
               </div>
             </div>
