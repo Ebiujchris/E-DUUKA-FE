@@ -13,6 +13,8 @@ import CreditsPage from './pages/CreditsPage';
 import RestockPage from './pages/RestockPage';
 import SettingsPage from './pages/SettingsPage';
 import BalanceSheetPage from './pages/BalanceSheetPage';
+import CashFlowPage from './pages/CashFlowPage';
+import IncomeComparisonPage from './pages/IncomeComparisonPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -90,6 +92,8 @@ export default function App() {
       <Route path="/restock"  element={<ProtectedRoute><RestockPage /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/balance-sheet" element={<ProtectedRoute><BalanceSheetPage /></ProtectedRoute>} />
+      <Route path="/cash-flow" element={<ProtectedRoute><CashFlowPage /></ProtectedRoute>} />
+      <Route path="/income-comparison" element={<ProtectedRoute><IncomeComparisonPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

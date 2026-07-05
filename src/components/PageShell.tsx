@@ -18,6 +18,8 @@ const navItems = [
   { label: 'Expenses',  path: '/expenses' },
   { label: 'Reports',    path: '/reports' },
   { label: 'Financials', path: '/balance-sheet' },
+  { label: 'Cash Flow',  path: '/cash-flow' },
+  { label: 'Comparison', path: '/income-comparison' },
   { label: 'Suppliers',  path: '/suppliers' },
   { label: 'Staff',     path: '/staff' },
   { label: 'Settings',  path: '/settings' },

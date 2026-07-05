@@ -9,31 +9,26 @@ const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString('en-US', { maxim
 
 interface StockItem { name: string; qty: number; buyingPrice: number; value: number }
 interface SupplierItem { name: string; owed: number }
+interface FixedAssetItem {
+  id: string; name: string; category: string; cost: number;
+  accumulatedDepreciation: number; bookValue: number; annualDepreciation: number; acquireDate: string;
+}
+interface ExpenseLine { category: string; total: number }
 
 interface BalanceSheet {
   asOf: string;
   assets: {
-    stockValue: number;
-    stockItems: StockItem[];
-    receivables: number;
-    cashRevenue: number;
+    stockValue: number; stockItems: StockItem[];
+    receivables: number; cashRevenue: number;
+    fixedAssets: FixedAssetItem[]; totalFixedAssets: number;
     total: number;
   };
-  liabilities: {
-    supplierDebt: number;
-    supplierBreakdown: SupplierItem[];
-    total: number;
-  };
-  equity: {
-    initialCapital: number;
-    retainedEarnings: number;
-    total: number;
-  };
+  liabilities: { supplierDebt: number; supplierBreakdown: SupplierItem[]; total: number };
+  equity: { initialCapital: number; retainedEarnings: number; total: number };
   incomeStatement: {
-    totalRevenue: number;
-    grossProfit: number;
-    totalExpenses: number;
-    netProfit: number;
+    totalRevenue: number; grossProfit: number; totalExpenses: number;
+    netProfit: number; taxProvision: number; netProfitAfterTax: number;
+    payroll: number; expenseBreakdown: ExpenseLine[]; annualDepreciation: number;
     period: string;
   };
 }
@@ -41,6 +36,8 @@ interface BalanceSheet {
 export default function BalanceSheetPage() {
   const { user } = useAuth();
   const [showStock, setShowStock] = useState(false);
+  const [showFixedAssets, setShowFixedAssets] = useState(false);
+  const [showExpenses, setShowExpenses] = useState(false);
 
   const fetchBS = useCallback(
     () => fetch(`${API_URL}/dashboard/balance-sheet`, { headers: authHeader() })
@@ -63,6 +60,15 @@ export default function BalanceSheetPage() {
       .map(s => `<tr><td>${s.name}</td><td class="right red">${fmt(s.owed)}</td></tr>`)
       .join('');
 
+    const fixedAssetRows = assets.fixedAssets
+      .map(a => `<tr><td>${a.name}</td><td>${a.category}</td><td class="right">${fmt(a.cost)}</td><td class="right red">${fmt(a.accumulatedDepreciation)}</td><td class="right green">${fmt(a.bookValue)}</td></tr>`)
+      .join('');
+
+    const expenseRows = inc.expenseBreakdown
+      .sort((a, b) => b.total - a.total)
+      .map(e => `<tr><td style="text-transform:capitalize">${e.category.replace(/_/g, ' ')}</td><td class="right red">${fmt(e.total)}</td></tr>`)
+      .join('');
+
     printHtml(`
       <h1>Balance Sheet — E-DUUKA</h1>
       <p class="meta">As of ${new Date(bs.asOf).toLocaleDateString('en-UG', { weekday:'long', year:'numeric', month:'long', day:'numeric' })} &nbsp;·&nbsp; Generated: ${new Date().toLocaleString()}</p>
@@ -71,10 +77,19 @@ export default function BalanceSheetPage() {
       <table>
         <tr><th>Item</th><th class="right">Value</th></tr>
         <tr><td>Stock on hand</td><td class="right">${fmt(assets.stockValue)}</td></tr>
-        <tr><td>Customer receivables (outstanding credits)</td><td class="right">${fmt(assets.receivables)}</td></tr>
+        <tr><td>Customer receivables</td><td class="right">${fmt(assets.receivables)}</td></tr>
         <tr><td>Cash & mobile revenue (YTD)</td><td class="right">${fmt(assets.cashRevenue)}</td></tr>
+        <tr><td>Fixed assets (net book value)</td><td class="right">${fmt(assets.totalFixedAssets)}</td></tr>
         <tr><td><strong>Total Assets</strong></td><td class="right"><strong>${fmt(assets.total)}</strong></td></tr>
       </table>
+
+      ${assets.fixedAssets.length ? `
+      <h2>Fixed Assets Detail</h2>
+      <table>
+        <tr><th>Asset</th><th>Category</th><th class="right">Cost</th><th class="right">Accumulated Dep.</th><th class="right">Book Value</th></tr>
+        ${fixedAssetRows}
+        <tr><td><strong>Total</strong></td><td></td><td></td><td></td><td class="right"><strong>${fmt(assets.totalFixedAssets)}</strong></td></tr>
+      </table>` : ''}
 
       <h2>Liabilities</h2>
       <table>
@@ -97,8 +112,19 @@ export default function BalanceSheetPage() {
         <tr><td>Total Revenue</td><td class="right">${fmt(inc.totalRevenue)}</td></tr>
         <tr><td>Gross Profit</td><td class="right green">${fmt(inc.grossProfit)}</td></tr>
         <tr><td>Total Expenses</td><td class="right red">${fmt(inc.totalExpenses)}</td></tr>
-        <tr><td><strong>Net Profit</strong></td><td class="right ${inc.netProfit >= 0 ? 'green' : 'red'}"><strong>${fmt(inc.netProfit)}</strong></td></tr>
+        <tr><td>&nbsp;&nbsp;↳ Payroll (salaries)</td><td class="right red">${fmt(inc.payroll)}</td></tr>
+        <tr><td>&nbsp;&nbsp;↳ Annual depreciation</td><td class="right red">${fmt(inc.annualDepreciation)}</td></tr>
+        <tr><td>Net Profit (before tax)</td><td class="right ${inc.netProfit >= 0 ? 'green' : 'red'}">${fmt(inc.netProfit)}</td></tr>
+        <tr><td>Tax provision (30%)</td><td class="right red">${fmt(inc.taxProvision)}</td></tr>
+        <tr><td><strong>Net Profit (after tax)</strong></td><td class="right ${inc.netProfitAfterTax >= 0 ? 'green' : 'red'}"><strong>${fmt(inc.netProfitAfterTax)}</strong></td></tr>
       </table>
+
+      ${inc.expenseBreakdown.length ? `
+      <h2>Expense Breakdown</h2>
+      <table>
+        <tr><th>Category</th><th class="right">Amount</th></tr>
+        ${expenseRows}
+      </table>` : ''}
 
       ${assets.stockItems.length ? `
       <h2>Stock Valuation Detail</h2>
@@ -120,7 +146,7 @@ export default function BalanceSheetPage() {
   };
 
   return (
-    <PageShell title="Balance Sheet" description="Your shop's full financial position — assets, liabilities and equity.">
+    <PageShell title="Balance Sheet" description="Full financial position — assets, liabilities, equity and income.">
       {loading ? (
         <div className="rounded-2xl border border-dashed border-slate-200 p-10 text-center text-slate-500">Loading financial data…</div>
       ) : error ? (
@@ -131,7 +157,7 @@ export default function BalanceSheetPage() {
       ) : bs ? (
         <div className="space-y-6">
 
-          {/* Header row */}
+          {/* Header */}
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-xs text-slate-500">
               As of {new Date(bs.asOf).toLocaleDateString('en-UG', { weekday:'long', year:'numeric', month:'long', day:'numeric' })}
@@ -181,7 +207,7 @@ export default function BalanceSheetPage() {
                 </button>
                 {showStock && (
                   <div className="mt-2 rounded-xl border border-slate-100 divide-y divide-slate-100 max-h-48 overflow-y-auto">
-                    {bs.assets.stockItems.sort((a,b) => b.value - a.value).map(s => (
+                    {bs.assets.stockItems.sort((a, b) => b.value - a.value).map(s => (
                       <div key={s.name} className="flex items-center justify-between px-3 py-1.5 text-xs">
                         <span className="text-slate-700">{s.name} <span className="text-slate-400">× {s.qty}</span></span>
                         <span className="font-medium text-slate-800">{fmt(s.value)}</span>
@@ -207,6 +233,41 @@ export default function BalanceSheetPage() {
                   <p className="text-xs text-slate-400">Non-credit sales this year</p>
                 </div>
                 <p className="text-base font-bold text-emerald-700">{fmt(bs.assets.cashRevenue)}</p>
+              </div>
+
+              {/* Fixed assets */}
+              <div className="border-t border-slate-100 pt-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-700">Fixed assets (net book value)</p>
+                    <p className="text-xs text-slate-400">{bs.assets.fixedAssets.length} assets · after depreciation</p>
+                  </div>
+                  <p className="text-base font-bold text-slate-900">{fmt(bs.assets.totalFixedAssets)}</p>
+                </div>
+                {bs.assets.fixedAssets.length > 0 && (
+                  <>
+                    <button type="button" onClick={() => setShowFixedAssets(!showFixedAssets)}
+                      className="mt-1 text-xs text-brand-600 hover:underline">
+                      {showFixedAssets ? 'Hide breakdown' : 'Show breakdown'}
+                    </button>
+                    {showFixedAssets && (
+                      <div className="mt-2 rounded-xl border border-slate-100 divide-y divide-slate-100">
+                        {bs.assets.fixedAssets.map(a => (
+                          <div key={a.id} className="px-3 py-2 text-xs">
+                            <div className="flex items-center justify-between">
+                              <span className="font-medium text-slate-700">{a.name}</span>
+                              <span className="font-semibold text-slate-800">{fmt(a.bookValue)}</span>
+                            </div>
+                            <div className="flex items-center justify-between text-slate-400 mt-0.5">
+                              <span>Cost {fmt(a.cost)} · Dep. {fmt(a.accumulatedDepreciation)}</span>
+                              <span className="capitalize">{a.category}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
 
               {/* Total assets */}
@@ -273,17 +334,19 @@ export default function BalanceSheetPage() {
           </div>
 
           {/* Income Statement */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="flex items-center justify-between mb-4">
+          <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
+            <div className="flex items-center justify-between">
               <h2 className="text-base font-bold text-slate-900">Income Statement</h2>
               <span className="text-xs bg-brand-100 text-brand-700 rounded-full px-3 py-1 font-medium">{bs.incomeStatement.period}</span>
             </div>
+
+            {/* Main metrics */}
             <div className="grid gap-4 sm:grid-cols-4">
               {[
-                { label: 'Revenue',       value: bs.incomeStatement.totalRevenue,  color: 'text-slate-900' },
-                { label: 'Gross Profit',  value: bs.incomeStatement.grossProfit,   color: 'text-emerald-700' },
-                { label: 'Expenses',      value: bs.incomeStatement.totalExpenses, color: 'text-red-600' },
-                { label: 'Net Profit',    value: bs.incomeStatement.netProfit,     color: bs.incomeStatement.netProfit >= 0 ? 'text-emerald-700' : 'text-red-600' },
+                { label: 'Revenue',        value: bs.incomeStatement.totalRevenue,      color: 'text-slate-900' },
+                { label: 'Gross Profit',   value: bs.incomeStatement.grossProfit,       color: 'text-emerald-700' },
+                { label: 'Total Expenses', value: bs.incomeStatement.totalExpenses,     color: 'text-red-600' },
+                { label: 'Net Profit',     value: bs.incomeStatement.netProfit,         color: bs.incomeStatement.netProfit >= 0 ? 'text-emerald-700' : 'text-red-600' },
               ].map(({ label, value, color }) => (
                 <div key={label} className="rounded-xl border border-slate-100 bg-slate-50 p-4">
                   <p className="text-xs text-slate-500 uppercase tracking-wide">{label}</p>
@@ -291,6 +354,50 @@ export default function BalanceSheetPage() {
                 </div>
               ))}
             </div>
+
+            {/* Tax + payroll + depreciation */}
+            <div className="rounded-xl border border-slate-100 divide-y divide-slate-100">
+              <div className="flex items-center justify-between px-4 py-2.5 text-sm">
+                <span className="text-slate-600">Payroll (salaries)</span>
+                <span className="font-semibold text-red-600">{fmt(bs.incomeStatement.payroll)}</span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-2.5 text-sm">
+                <span className="text-slate-600">Annual depreciation (fixed assets)</span>
+                <span className="font-semibold text-red-600">{fmt(bs.incomeStatement.annualDepreciation)}</span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-2.5 text-sm">
+                <span className="text-slate-600">Tax provision (30% of net profit)</span>
+                <span className="font-semibold text-red-600">{fmt(bs.incomeStatement.taxProvision)}</span>
+              </div>
+              <div className="flex items-center justify-between px-4 py-2.5 text-sm font-bold">
+                <span className="text-slate-900">Net profit after tax</span>
+                <span className={bs.incomeStatement.netProfitAfterTax >= 0 ? 'text-emerald-700' : 'text-red-600'}>
+                  {fmt(bs.incomeStatement.netProfitAfterTax)}
+                </span>
+              </div>
+            </div>
+
+            {/* Expense breakdown */}
+            {bs.incomeStatement.expenseBreakdown.length > 0 && (
+              <div>
+                <button type="button" onClick={() => setShowExpenses(!showExpenses)}
+                  className="text-xs text-brand-600 hover:underline mb-2">
+                  {showExpenses ? 'Hide expense breakdown' : 'Show expense breakdown'}
+                </button>
+                {showExpenses && (
+                  <div className="rounded-xl border border-slate-100 divide-y divide-slate-100">
+                    {bs.incomeStatement.expenseBreakdown
+                      .sort((a, b) => b.total - a.total)
+                      .map(e => (
+                        <div key={e.category} className="flex items-center justify-between px-3 py-1.5 text-xs">
+                          <span className="text-slate-600 capitalize">{e.category.replace(/_/g, ' ')}</span>
+                          <span className="font-medium text-red-600">{fmt(e.total)}</span>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
         </div>
