@@ -157,7 +157,6 @@ export default function SettingsPage() {
         {/* App info */}
         <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 text-sm text-slate-500 space-y-1">
           <p className="font-medium text-slate-700">E-DUUKA Shop Management</p>
-          <p>Designed for downtown Kampala merchants.</p>
           <p className="text-xs mt-2">Shop ID: <span className="font-mono text-xs">{user?.shopId}</span></p>
         </div>
       </div>
