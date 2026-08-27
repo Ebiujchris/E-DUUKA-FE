@@ -15,6 +15,8 @@ import SettingsPage from './pages/SettingsPage';
 import BalanceSheetPage from './pages/BalanceSheetPage';
 import CashFlowPage from './pages/CashFlowPage';
 import IncomeComparisonPage from './pages/IncomeComparisonPage';
+import CategoriesPage from './pages/CategoriesPage';
+import BrandsPage from './pages/BrandsPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
@@ -89,8 +91,10 @@ export default function App() {
       <Route path="/expenses" element={<ProtectedRoute><ExpensesPage /></ProtectedRoute>} />
       <Route path="/receipts" element={<ProtectedRoute><ReceiptsPage /></ProtectedRoute>} />
       <Route path="/credits"  element={<ProtectedRoute><CreditsPage /></ProtectedRoute>} />
-      <Route path="/restock"  element={<ProtectedRoute><RestockPage /></ProtectedRoute>} />
-      <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+      <Route path="/restock"    element={<ProtectedRoute><RestockPage /></ProtectedRoute>} />
+      <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
+      <Route path="/brands"     element={<ProtectedRoute><BrandsPage /></ProtectedRoute>} />
+      <Route path="/settings"   element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/balance-sheet" element={<ProtectedRoute><BalanceSheetPage /></ProtectedRoute>} />
       <Route path="/cash-flow" element={<ProtectedRoute><CashFlowPage /></ProtectedRoute>} />
       <Route path="/income-comparison" element={<ProtectedRoute><IncomeComparisonPage /></ProtectedRoute>} />

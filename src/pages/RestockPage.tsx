@@ -5,6 +5,7 @@ import { SkeletonList } from '../components/Skeleton';
 import { useToast } from '../components/Toast';
 import { useFetch } from '../hooks/useFetch';
 import { API_URL, authHeader, bustCache } from '../lib/api';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 interface Product {
   id: string;
@@ -13,6 +14,8 @@ interface Product {
   sellingPrice: number;
   stockQuantity: number;
   lowStockThreshold?: number;
+  category?: string;
+  brand?: string;
 }
 
 const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
@@ -20,21 +23,30 @@ const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString('en-US', { maxim
 export default function RestockPage() {
   const { user } = useAuth();
   const toast = useToast();
-  const [submitting, setSubmitting] = useState(false);
-  const [search, setSearch]         = useState('');
-  const [filter, setFilter]         = useState<'all' | 'low' | 'out'>('all');
-  const [editingId, setEditingId]   = useState<string | null>(null);
-  const [restockQty, setRestockQty] = useState('');
-  const [newBuyPrice, setNewBuyPrice] = useState('');
+  const [submitting, setSubmitting]     = useState(false);
+  const [search, setSearch]             = useState('');
+  const [filter, setFilter]             = useState<'all' | 'low' | 'out'>('all');
+  const [activeCategory, setActiveCategory] = useState<string>('__all__');
+  const [activeBrand, setActiveBrand] = useState<string>('__all__');
+  const [editingId, setEditingId]       = useState<string | null>(null);
+  const [restockQty, setRestockQty]     = useState('');
+  const [newBuyPrice, setNewBuyPrice]   = useState('');
   const [newSellPrice, setNewSellPrice] = useState('');
-
-  // Edit product fields
   const [editingProduct, setEditingProduct] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState({ name: '', buyingPrice: '', sellingPrice: '', lowStockThreshold: '' });
+  const [editForm, setEditForm]         = useState({ name: '', buyingPrice: '', sellingPrice: '', lowStockThreshold: '' });
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
 
   const { data: products = [], loading, error, reload } = useFetch<Product[]>(
     () => fetch(`${API_URL}/products`, { headers: authHeader() }).then(r => {
       if (!r.ok) throw new Error('Failed to load products');
+      return r.json();
+    }),
+    [user?.id],
+  );
+
+  const { data: categories = [] } = useFetch<string[]>(
+    () => fetch(`${API_URL}/products/categories`, { headers: authHeader() }).then((r) => {
+      if (!r.ok) throw new Error('Failed to load categories');
       return r.json();
     }),
     [user?.id],
@@ -47,18 +59,31 @@ export default function RestockPage() {
       filter === 'all' ||
       (filter === 'out' && p.stockQuantity === 0) ||
       (filter === 'low' && p.stockQuantity > 0 && threshold > 0 && p.stockQuantity <= threshold);
-    return matchSearch && matchFilter;
-  }), [products, search, filter]);
+    const matchCat = activeCategory === '__all__' || (p.category ?? 'Uncategorized') === activeCategory;
+    const matchBrand = activeBrand === '__all__' || p.brand === activeBrand;
+    return matchSearch && matchFilter && matchCat && matchBrand;
+  }), [products, search, filter, activeCategory, activeBrand]);
 
   const lowCount = products.filter(p => p.stockQuantity > 0 && (p.lowStockThreshold ?? 0) > 0 && p.stockQuantity <= (p.lowStockThreshold ?? 0)).length;
   const outCount = products.filter(p => p.stockQuantity === 0).length;
+
+  const allCategories = ['__all__', ...(Array.isArray(categories) ? categories : []), ...(products.some(p => !p.category) ? ['Uncategorized'] : [])];
+
+  const brands = useMemo(() =>
+    [...new Set(products.map(p => p.brand).filter(Boolean) as string[])].sort()
+  , [products]);
+
+  const PAGE_SIZE = 10;
+  const [page, setPage] = useState(1);
+  useMemo(() => setPage(1), [search, filter, activeCategory, activeBrand]); // eslint-disable-line react-hooks/exhaustive-deps
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   const handleRestock = async (id: string) => {
     const qty = Number(restockQty);
     if (!qty || qty <= 0) { toast.error('Enter a valid quantity'); return; }
     setSubmitting(true);
     try {
-      // updateStock uses negative quantity to ADD stock back (see service: stockQuantity -= quantity)
       const res = await fetch(`${API_URL}/products/${id}/stock`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', ...authHeader() },
@@ -68,7 +93,6 @@ export default function RestockPage() {
         const p = await res.json().catch(() => ({}));
         throw new Error(p.message || 'Failed to restock');
       }
-      // Also update prices if provided
       if (newBuyPrice || newSellPrice) {
         const updates: Record<string, number> = {};
         if (newBuyPrice) updates.buyingPrice = Number(newBuyPrice);
@@ -108,14 +132,49 @@ export default function RestockPage() {
   };
 
   const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Delete "${name}"? This cannot be undone.`)) return;
-    await fetch(`${API_URL}/products/${id}`, { method: 'DELETE', headers: authHeader() });
-    toast.success('Product deleted');
-    bustCache('/products'); reload();
+    setDeleteTarget({ id, name });
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const res = await fetch(`${API_URL}/products/${deleteTarget.id}`, { method: 'DELETE', headers: authHeader() });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || `Delete failed (${res.status})`);
+      }
+      toast.success('Product deleted');
+      setDeleteTarget(null);
+      bustCache('/products'); reload();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Delete failed');
+      setDeleteTarget(null);
+    }
   };
 
   return (
     <PageShell title="Stock Management" description="Restock products, update prices, and manage your inventory.">
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete product"
+        message={`Delete "${deleteTarget?.name}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+
+      {/* Category tabs */}
+      {allCategories.length > 1 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {allCategories.map((cat) => (
+            <button key={cat} type="button" onClick={() => setActiveCategory(cat)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${activeCategory === cat ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+              {cat === '__all__' ? `All (${products.length})` : cat}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="mb-5 flex flex-wrap items-center gap-3">
@@ -127,12 +186,28 @@ export default function RestockPage() {
           {(['all', 'low', 'out'] as const).map((f) => (
             <button key={f} type="button" onClick={() => setFilter(f)}
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${filter === f ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
-              {f === 'all' ? `All (${products.length})` : f === 'low' ? `Low stock (${lowCount})` : `Out of stock (${outCount})`}
+              {f === 'all' ? `All (${products.length})` : f === 'low' ? `Low (${lowCount})` : `Out (${outCount})`}
             </button>
           ))}
         </div>
         <span className="ml-auto text-sm text-slate-400">{filtered.length} products</span>
       </div>
+
+      {/* Brand filter */}
+      {brands.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <button type="button" onClick={() => setActiveBrand('__all__')}
+            className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${activeBrand === '__all__' ? 'bg-slate-700 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+            All brands
+          </button>
+          {brands.map(b => (
+            <button key={b} type="button" onClick={() => setActiveBrand(b)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${activeBrand === b ? 'bg-blue-500 text-white' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}>
+              {b} ({products.filter(p => p.brand === b).length})
+            </button>
+          ))}
+        </div>
+      )}
 
       {loading ? <SkeletonList rows={6} />
         : error ? (
@@ -143,7 +218,7 @@ export default function RestockPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {filtered.map((p) => {
+            {paginated.map((p) => {
               const threshold = p.lowStockThreshold ?? 0;
               const isOut = p.stockQuantity === 0;
               const isLow = !isOut && threshold > 0 && p.stockQuantity <= threshold;
@@ -152,11 +227,11 @@ export default function RestockPage() {
 
               return (
                 <div key={p.id} className={`rounded-2xl border p-4 transition ${isOut ? 'border-red-200 bg-red-50' : isLow ? 'border-amber-200 bg-amber-50' : 'border-slate-200 bg-white'}`}>
-                  {/* Product row */}
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="font-semibold text-slate-900">{p.name}</p>
+                        {p.category && <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] text-slate-600">{p.category}</span>}
                         {isOut && <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-600">Out of stock</span>}
                         {isLow && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-600">Low stock</span>}
                       </div>
@@ -173,7 +248,6 @@ export default function RestockPage() {
                     </div>
                   </div>
 
-                  {/* Actions */}
                   {!isRestocking && !isEditing && (
                     <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-3">
                       <button type="button"
@@ -193,7 +267,6 @@ export default function RestockPage() {
                     </div>
                   )}
 
-                  {/* Restock form */}
                   {isRestocking && (
                     <div className="mt-3 border-t border-slate-200 pt-3 space-y-3">
                       <p className="text-xs font-semibold text-slate-700">Add stock to {p.name}</p>
@@ -227,7 +300,6 @@ export default function RestockPage() {
                     </div>
                   )}
 
-                  {/* Edit product form */}
                   {isEditing && (
                     <div className="mt-3 border-t border-slate-200 pt-3 space-y-3">
                       <p className="text-xs font-semibold text-slate-700">Edit product details</p>
@@ -267,6 +339,42 @@ export default function RestockPage() {
             })}
           </div>
         )}
+
+      {/* Pagination */}
+      {!loading && !error && totalPages > 1 && (
+        <div className="mt-4 flex items-center justify-between">
+          <p className="text-xs text-slate-400">
+            {(page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)} of {filtered.length} products
+          </p>
+          <div className="flex items-center gap-1">
+            <button type="button" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}
+              className="rounded-lg px-2.5 py-1.5 text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+              ←
+            </button>
+            {Array.from({ length: totalPages }, (_, i) => i + 1)
+              .filter(n => n === 1 || n === totalPages || Math.abs(n - page) <= 1)
+              .reduce<(number | '...')[]>((acc, n, i, arr) => {
+                if (i > 0 && n - (arr[i - 1] as number) > 1) acc.push('...');
+                acc.push(n);
+                return acc;
+              }, [])
+              .map((n, i) =>
+                n === '...' ? (
+                  <span key={`e-${i}`} className="px-1 text-xs text-slate-400">…</span>
+                ) : (
+                  <button key={n} type="button" onClick={() => setPage(n as number)}
+                    className={`rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${page === n ? 'bg-brand-500 text-white' : 'border border-slate-200 text-slate-600 hover:bg-slate-100'}`}>
+                    {n}
+                  </button>
+                )
+              )}
+            <button type="button" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}
+              className="rounded-lg px-2.5 py-1.5 text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition">
+              →
+            </button>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }
