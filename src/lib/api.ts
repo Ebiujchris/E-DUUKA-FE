@@ -4,13 +4,27 @@ export const API_URL = normalized.endsWith('/api') ? normalized : `${normalized}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export interface UserPermissions {
+  canViewDashboard: boolean;
+  canMakeSales: boolean;
+  canApproveCredits: boolean;
+  canAccessInventory: boolean;
+  canManageExpenses: boolean;
+  canViewReports: boolean;
+  pagePermissions: Record<string, boolean>;
+}
+
 export interface User {
   id: string;
   phone: string;
   name: string;
   email?: string;
   shopId?: string;
+  shopName?: string;
   isActive?: boolean;
+  accountType?: 'owner' | 'staff';
+  role?: string;
+  permissions?: UserPermissions;
 }
 
 export interface AuthResponse {

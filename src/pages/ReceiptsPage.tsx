@@ -55,7 +55,7 @@ function groupIntoReceipts(sales: SaleItem[]): ReceiptGroup[] {
   return groups;
 }
 
-function printReceipt(group: ReceiptGroup) {
+function printReceipt(group: ReceiptGroup, shopName: string) {
   const receiptNo = group.key.slice(0, 8).toUpperCase();
   const dateStr = new Date(group.date).toLocaleString('en-UG', { dateStyle: 'medium', timeStyle: 'short' });
 
@@ -97,7 +97,7 @@ function printReceipt(group: ReceiptGroup) {
       <div class="receipt-header">
         <div class="logo-box">ED</div>
         <div>
-          <div class="r-company">E-DUUKA</div>
+          <div class="r-company">${shopName || 'E-DUUKA'}</div>
           <div class="r-tagline">Shop Management</div>
         </div>
       </div>
@@ -120,7 +120,7 @@ function printReceipt(group: ReceiptGroup) {
       <div class="total-row"><span>Total Amount</span><span class="total-amount">${fmt(group.total)}</span></div>
       <div class="receipt-footer">
         <div class="thank-you">Thank you for your business!</div>
-        <div class="footer-note">E-DUUKA Shop Management</div>
+        <div class="footer-note">${shopName || 'E-DUUKA'} Shop Management</div>
         <div class="footer-note">Keep this receipt for your records</div>
       </div>
     </div>
@@ -250,7 +250,7 @@ export default function ReceiptsPage() {
                             <p className="text-[10px] text-slate-400 uppercase tracking-wide">Total</p>
                             <p className="text-lg font-bold text-slate-900">{fmt(group.total)}</p>
                           </div>
-                          <button type="button" onClick={() => printReceipt(group)}
+                          <button type="button" onClick={() => printReceipt(group, user?.shopName ?? '')}
                             className="flex items-center gap-1.5 rounded-xl bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow shadow-brand-500/20 hover:bg-brand-600 transition">
                             🖨 Print
                           </button>
