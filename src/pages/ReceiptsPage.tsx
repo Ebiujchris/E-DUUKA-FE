@@ -68,30 +68,55 @@ function printReceipt(group: ReceiptGroup) {
     </tr>`).join('');
 
   printHtml(`
+    <style>
+      .receipt-wrap{max-width:480px;margin:0 auto}
+      .receipt-header{display:flex;align-items:center;gap:14px;margin-bottom:20px}
+      .logo-box{width:48px;height:48px;background:#2563eb;color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0}
+      .r-company{font-size:20px;font-weight:800;color:#0f172a}.r-tagline{font-size:11px;color:#64748b;margin-top:2px}
+      .divider-thick{border:none;border-top:3px solid #0f172a;margin:0 0 18px}
+      .r-divider{border:none;border-top:1px dashed #cbd5e1;margin:16px 0}
+      .meta-row{display:flex;justify-content:space-between;margin-bottom:16px}
+      .r-label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:3px}
+      .r-value{font-size:13px;font-weight:600;color:#0f172a}
+      .info-strip{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;display:flex;gap:24px;margin-bottom:4px}
+      .info-item{display:flex;flex-direction:column;gap:3px}
+      .payment-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:capitalize}
+      .cash{background:#dcfce7;color:#16a34a}.credit{background:#fef9c3;color:#a16207}.mobile_money{background:#dbeafe;color:#1d4ed8}
+      .r-table{width:100%;border-collapse:collapse}
+      .r-table th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;padding:7px 8px;border-bottom:1px solid #e2e8f0}
+      .r-table td{padding:9px 8px;font-size:12px;color:#334155;border-bottom:1px solid #f1f5f9}
+      .r-table tr:last-child td{border-bottom:none}
+      .r-center{text-align:center}.r-right{text-align:right}.r-bold{font-weight:600}
+      .total-row{display:flex;justify-content:space-between;align-items:center;padding:12px 8px;background:#1e40af;border-radius:10px;color:#fff}
+      .total-row span:first-child{font-size:13px;font-weight:600}.total-amount{font-size:20px;font-weight:800}
+      .receipt-footer{margin-top:24px;text-align:center}
+      .thank-you{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px}
+      .footer-note{font-size:11px;color:#94a3b8;line-height:1.6}
+    </style>
     <div class="receipt-wrap">
       <div class="receipt-header">
         <div class="logo-box">ED</div>
         <div>
-          <div class="company">E-DUUKA</div>
-          <div class="tagline">Shop Management</div>
+          <div class="r-company">E-DUUKA</div>
+          <div class="r-tagline">Shop Management</div>
         </div>
       </div>
       <div class="divider-thick"></div>
       <div class="meta-row">
-        <div><div class="label">Receipt No.</div><div class="value">#${receiptNo}</div></div>
-        <div style="text-align:right"><div class="label">Date & Time</div><div class="value">${dateStr}</div></div>
+        <div><div class="r-label">Receipt No.</div><div class="r-value">#${receiptNo}</div></div>
+        <div style="text-align:right"><div class="r-label">Date & Time</div><div class="r-value">${dateStr}</div></div>
       </div>
       <div class="info-strip">
-        <div class="info-item"><span class="label">Customer</span><span class="value">${group.customer}</span></div>
-        ${group.staffName ? `<div class="info-item"><span class="label">Sale by</span><span class="value">${group.staffName}</span></div>` : ''}
-        <div class="info-item"><span class="label">Payment</span><span class="value payment-badge ${group.paymentType}">${group.paymentType.replace('_', ' ')}</span></div>
+        <div class="info-item"><span class="r-label">Customer</span><span class="r-value">${group.customer}</span></div>
+        ${group.staffName ? `<div class="info-item"><span class="r-label">Sale by</span><span class="r-value">${group.staffName}</span></div>` : ''}
+        <div class="info-item"><span class="r-label">Payment</span><span class="r-value payment-badge ${group.paymentType}">${group.paymentType.replace('_', ' ')}</span></div>
       </div>
-      <div class="divider"></div>
-      <table>
-        <thead><tr><th>Item</th><th class="center">Qty</th><th class="right">Unit Price</th><th class="right">Amount</th></tr></thead>
+      <div class="r-divider"></div>
+      <table class="r-table">
+        <thead><tr><th>Item</th><th class="r-center">Qty</th><th class="r-right">Unit Price</th><th class="r-right">Amount</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
-      <div class="divider"></div>
+      <div class="r-divider"></div>
       <div class="total-row"><span>Total Amount</span><span class="total-amount">${fmt(group.total)}</span></div>
       <div class="receipt-footer">
         <div class="thank-you">Thank you for your business!</div>
@@ -99,30 +124,7 @@ function printReceipt(group: ReceiptGroup) {
         <div class="footer-note">Keep this receipt for your records</div>
       </div>
     </div>
-  `, `Receipt #${receiptNo}`, `
-    .receipt-wrap{max-width:480px;margin:0 auto;font-family:'Segoe UI',Arial,sans-serif}
-    .receipt-header{display:flex;align-items:center;gap:14px;margin-bottom:20px}
-    .logo-box{width:48px;height:48px;background:#2563eb;color:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;flex-shrink:0}
-    .company{font-size:20px;font-weight:800;color:#0f172a}.tagline{font-size:11px;color:#64748b;margin-top:2px}
-    .divider-thick{border:none;border-top:3px solid #0f172a;margin:0 0 18px}
-    .divider{border:none;border-top:1px dashed #cbd5e1;margin:16px 0}
-    .meta-row{display:flex;justify-content:space-between;margin-bottom:16px}
-    .label{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#94a3b8;margin-bottom:3px}
-    .value{font-size:13px;font-weight:600;color:#0f172a}
-    .info-strip{background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 16px;display:flex;gap:24px;margin-bottom:4px}
-    .info-item{display:flex;flex-direction:column;gap:3px}
-    .payment-badge{display:inline-block;padding:2px 10px;border-radius:20px;font-size:11px;font-weight:600;text-transform:capitalize}
-    .cash{background:#dcfce7;color:#16a34a}.credit{background:#fef9c3;color:#a16207}.mobile_money{background:#dbeafe;color:#1d4ed8}
-    table{width:100%;border-collapse:collapse}
-    th{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;padding:7px 8px;border-bottom:1px solid #e2e8f0}
-    td{padding:9px 8px;font-size:12px;color:#334155;border-bottom:1px solid #f1f5f9}
-    tr:last-child td{border-bottom:none}.center{text-align:center}.right{text-align:right}.bold{font-weight:600}
-    .total-row{display:flex;justify-content:space-between;align-items:center;padding:12px 8px;background:#1e40af;border-radius:10px;color:#fff}
-    .total-row span:first-child{font-size:13px;font-weight:600}.total-amount{font-size:20px;font-weight:800}
-    .receipt-footer{margin-top:24px;text-align:center}
-    .thank-you{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px}
-    .footer-note{font-size:11px;color:#94a3b8;line-height:1.6}
-  `);
+  `, `Receipt #${receiptNo}`);
 }
 
 const paymentColors: Record<string, string> = {
