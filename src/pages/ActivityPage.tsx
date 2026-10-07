@@ -20,6 +20,22 @@ const formatDate = (value: string) => new Date(value).toLocaleString('en-UG', {
   minute: '2-digit',
 });
 
+const formatMetadata = (metadata?: Record<string, unknown>) => {
+  if (!metadata || Object.keys(metadata).length === 0) return null;
+
+  const entries = Object.entries(metadata)
+    .filter(([, value]) => value !== undefined && value !== null && value !== '')
+    .slice(0, 4);
+
+  if (entries.length === 0) return null;
+
+  return entries.map(([key, value]) => (
+    <span key={key} className="inline-flex items-center rounded-full border border-slate-200 bg-white px-2 py-1 text-[10px] font-medium uppercase tracking-[0.08em] text-slate-500">
+      {key}: {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+    </span>
+  ));
+};
+
 export default function ActivityPage() {
   const [items, setItems] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,10 +83,15 @@ export default function ActivityPage() {
                   </div>
                   <span className="shrink-0 text-[11px] text-slate-400">{formatDate(item.createdAt)}</span>
                 </div>
-                <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
-                  <span>{item.actorName || 'System'}</span>
-                  {item.metadata && Object.keys(item.metadata).length > 0 && (
-                    <span>{JSON.stringify(item.metadata)}</span>
+                <div className="mt-3 flex flex-col gap-2 text-xs text-slate-500">
+                  <div className="flex items-center justify-between gap-3">
+                    <span>{item.actorName || 'System'}</span>
+                    <span className="uppercase tracking-[0.08em] text-slate-400">{item.entityType}</span>
+                  </div>
+                  {item.metadata && (
+                    <div className="flex flex-wrap gap-2">
+                      {formatMetadata(item.metadata)}
+                    </div>
                   )}
                 </div>
               </div>
