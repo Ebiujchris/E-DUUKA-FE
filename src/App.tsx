@@ -17,9 +17,12 @@ import CashFlowPage from './pages/CashFlowPage';
 import IncomeComparisonPage from './pages/IncomeComparisonPage';
 import CategoriesPage from './pages/CategoriesPage';
 import BrandsPage from './pages/BrandsPage';
+import ActivityPage from './pages/ActivityPage';
 
-function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, loading } = useAuth();
+type RequiredPermission = 'canViewDashboard' | 'canMakeSales' | 'canApproveCredits' | 'canAccessInventory' | 'canManageExpenses' | 'canViewReports';
+
+function ProtectedRoute({ children, requiredPermission }: { children: React.ReactNode; requiredPermission?: RequiredPermission }) {
+  const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) {
     return (
@@ -33,6 +36,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/" replace />;
   }
 
+  if (requiredPermission && user?.accountType === 'staff') {
+    const hasAccess = Boolean(user.permissions?.[requiredPermission]);
+    if (!hasAccess) {
+      return <Navigate to="/dashboard" replace />;
+    }
+  }
+
   return children;
 }
 
@@ -43,15 +53,23 @@ export default function App() {
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="canViewDashboard">
             <DashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/activity"
+        element={
+          <ProtectedRoute requiredPermission="canViewReports">
+            <ActivityPage />
           </ProtectedRoute>
         }
       />
       <Route
         path="/products"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="canAccessInventory">
             <ProductsPage />
           </ProtectedRoute>
         }
@@ -59,7 +77,7 @@ export default function App() {
       <Route
         path="/sales"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="canMakeSales">
             <SalesPage />
           </ProtectedRoute>
         }
@@ -67,7 +85,7 @@ export default function App() {
       <Route
         path="/reports"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute requiredPermission="canViewReports">
             <ReportsPage />
           </ProtectedRoute>
         }
@@ -88,16 +106,16 @@ export default function App() {
           </ProtectedRoute>
         }
       />
-      <Route path="/expenses" element={<ProtectedRoute><ExpensesPage /></ProtectedRoute>} />
-      <Route path="/receipts" element={<ProtectedRoute><ReceiptsPage /></ProtectedRoute>} />
-      <Route path="/credits"  element={<ProtectedRoute><CreditsPage /></ProtectedRoute>} />
-      <Route path="/restock"    element={<ProtectedRoute><RestockPage /></ProtectedRoute>} />
-      <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
-      <Route path="/brands"     element={<ProtectedRoute><BrandsPage /></ProtectedRoute>} />
+      <Route path="/expenses" element={<ProtectedRoute requiredPermission="canManageExpenses"><ExpensesPage /></ProtectedRoute>} />
+      <Route path="/receipts" element={<ProtectedRoute requiredPermission="canMakeSales"><ReceiptsPage /></ProtectedRoute>} />
+      <Route path="/credits"  element={<ProtectedRoute requiredPermission="canApproveCredits"><CreditsPage /></ProtectedRoute>} />
+      <Route path="/restock"    element={<ProtectedRoute requiredPermission="canAccessInventory"><RestockPage /></ProtectedRoute>} />
+      <Route path="/categories" element={<ProtectedRoute requiredPermission="canAccessInventory"><CategoriesPage /></ProtectedRoute>} />
+      <Route path="/brands"     element={<ProtectedRoute requiredPermission="canAccessInventory"><BrandsPage /></ProtectedRoute>} />
       <Route path="/settings"   element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-      <Route path="/balance-sheet" element={<ProtectedRoute><BalanceSheetPage /></ProtectedRoute>} />
-      <Route path="/cash-flow" element={<ProtectedRoute><CashFlowPage /></ProtectedRoute>} />
-      <Route path="/income-comparison" element={<ProtectedRoute><IncomeComparisonPage /></ProtectedRoute>} />
+      <Route path="/balance-sheet" element={<ProtectedRoute requiredPermission="canViewReports"><BalanceSheetPage /></ProtectedRoute>} />
+      <Route path="/cash-flow" element={<ProtectedRoute requiredPermission="canViewReports"><CashFlowPage /></ProtectedRoute>} />
+      <Route path="/income-comparison" element={<ProtectedRoute requiredPermission="canViewReports"><IncomeComparisonPage /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

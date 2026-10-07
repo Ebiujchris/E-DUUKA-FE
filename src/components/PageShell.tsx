@@ -41,6 +41,7 @@ const ALL_NAV: NavEntry[] = [
     ],
   },
   { label: 'Reports', path: '/reports' },
+  { label: 'Activity', path: '/activity' },
   {
     group: 'Financials',
     items: [
