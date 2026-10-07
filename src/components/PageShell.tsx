@@ -170,7 +170,7 @@ export default function PageShell({ title, description, children }: PageShellPro
               aria-label="Toggle menu"
             >
               {menuOpen
-                ? <span className="text-lg leading-none">✕</span>
+                ? <span className="text-[10px] font-bold leading-none">Close</span>
                 : <span className="flex flex-col gap-1 items-center justify-center w-5">
                     <span className="block h-0.5 w-4 bg-slate-600 rounded" />
                     <span className="block h-0.5 w-4 bg-slate-600 rounded" />

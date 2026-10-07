@@ -226,7 +226,7 @@ export default function CreditsPage() {
                         <div className="shrink-0 text-right">
                           <p className="text-xs text-slate-400">Total: {fmt(c.totalAmount)}</p>
                           <p className="text-xs text-emerald-600">Paid: {fmt(c.amountPaid)}</p>
-                          <p className={`font-bold text-base ${balance > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{fmt(balance)} {balance > 0 ? 'owed' : '✓'}</p>
+                          <p className={`font-bold text-base ${balance > 0 ? 'text-red-600' : 'text-emerald-600'}`}>{fmt(balance)} {balance > 0 ? 'owed' : 'settled'}</p>
                         </div>
                       </div>
 

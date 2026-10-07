@@ -48,9 +48,9 @@ export default function AuthModal({
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+          className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-lg text-xs font-semibold text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
         >
-          ✕
+          Close
         </button>
 
         <div className="mb-6 text-center">

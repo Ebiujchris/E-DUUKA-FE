@@ -80,7 +80,7 @@ export default function BrandsPage() {
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>
       ) : brandGroups.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 p-12 text-center text-slate-500">
-          <p className="text-3xl mb-3">🏷️</p>
+          <p className="mb-3 text-3xl font-semibold text-slate-400">B</p>
           <p className="font-medium">No brands yet</p>
           <p className="text-sm mt-1">Add products with a brand from the Inventory page.</p>
         </div>
@@ -98,8 +98,8 @@ export default function BrandsPage() {
               className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-blue-300 hover:shadow-md hover:-translate-y-0.5"
             >
               <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-2xl group-hover:bg-blue-100 transition">
-                  🏷️
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-lg font-bold text-blue-600 group-hover:bg-blue-100 transition">
+                  B
                 </div>
                 <div className="min-w-0">
                   <p className="font-semibold text-slate-900 truncate">{name}</p>

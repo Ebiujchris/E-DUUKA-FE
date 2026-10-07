@@ -43,8 +43,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   : 'bg-slate-800 text-white'
             }`}
           >
-            <span>
-              {t.type === 'success' ? '✓' : t.type === 'error' ? '✕' : 'ℹ'}
+            <span className="text-[10px] font-bold uppercase tracking-wide">
+              {t.type === 'success' ? 'OK' : t.type === 'error' ? 'ERR' : 'INFO'}
             </span>
             {t.message}
           </div>

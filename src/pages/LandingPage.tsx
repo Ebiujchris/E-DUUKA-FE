@@ -70,13 +70,15 @@ export default function LandingPage() {
       <section className="py-14 px-6">
         <div className="mx-auto max-w-4xl grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {[
-            { icon: '📦', label: 'Inventory', text: 'Track stock in real time', color: 'bg-blue-50 border-blue-100' },
-            { icon: '💰', label: 'Sales', text: 'Record and monitor profit', color: 'bg-emerald-50 border-emerald-100' },
-            { icon: '📋', label: 'Credits', text: 'Manage customer debts', color: 'bg-amber-50 border-amber-100' },
-            { icon: '📊', label: 'Reports', text: 'Insights to grow your shop', color: 'bg-purple-50 border-purple-100' },
+            { label: 'Inventory', text: 'Track stock in real time', color: 'bg-blue-50 border-blue-100' },
+            { label: 'Sales', text: 'Record and monitor profit', color: 'bg-emerald-50 border-emerald-100' },
+            { label: 'Credits', text: 'Manage customer debts', color: 'bg-amber-50 border-amber-100' },
+            { label: 'Reports', text: 'Insights to grow your shop', color: 'bg-purple-50 border-purple-100' },
           ].map((f) => (
             <div key={f.label} className={`rounded-2xl border p-5 ${f.color} transition hover:scale-[1.02]`}>
-              <div className="mb-3 text-2xl">{f.icon}</div>
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-white/70 text-sm font-bold text-slate-700">
+                {f.label.charAt(0)}
+              </div>
               <p className="text-sm font-semibold text-slate-800">{f.label}</p>
               <p className="mt-1 text-xs text-slate-500">{f.text}</p>
             </div>

@@ -241,7 +241,7 @@ export default function SuppliersPage() {
                       <div className="shrink-0 text-right">
                         {Number(s.totalOwed) > 0
                           ? <p className="text-sm font-bold text-red-600">{formatCurrency(s.totalOwed)} owed</p>
-                          : <p className="text-xs text-emerald-600 font-medium">✓ Clear</p>
+                          : <p className="text-xs text-emerald-600 font-medium">Clear</p>
                         }
                         <button type="button" onClick={() => handleDeleteSupplier(s.id)} className="text-xs text-red-400 hover:text-red-600 mt-1">Remove</button>
                       </div>

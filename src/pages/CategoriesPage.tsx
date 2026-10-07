@@ -15,28 +15,8 @@ interface Product {
   sellingPrice: number;
 }
 
-const CATEGORY_ICONS: Record<string, string> = {
-  'Electronics':   '📱',
-  'Phones':        '📱',
-  'Computers':     '💻',
-  'Laptops':       '💻',
-  'Clothing':      '👕',
-  'Food':          '🍎',
-  'Beverages':     '🥤',
-  'Furniture':     '🪑',
-  'Accessories':   '👜',
-  'Stationery':    '📝',
-  'Cosmetics':     '💄',
-  'Household':     '🏠',
-  'Toys':          '🧸',
-  'Sports':        '⚽',
-  'Tools':         '🔧',
-  'Medicine':      '💊',
-  'Uncategorized': '📦',
-};
-
-function getCategoryIcon(name: string): string {
-  return CATEGORY_ICONS[name] ?? '📦';
+function getCategoryInitial(name: string): string {
+  return name.trim().charAt(0).toUpperCase() || 'C';
 }
 
 export default function CategoriesPage() {
@@ -103,7 +83,7 @@ export default function CategoriesPage() {
         <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">{error}</div>
       ) : categoryGroups.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-slate-200 p-12 text-center text-slate-500">
-          <p className="text-3xl mb-3">📦</p>
+          <p className="mb-3 text-3xl font-semibold text-slate-400">—</p>
           <p className="font-medium">No categories yet</p>
           <p className="text-sm mt-1">Add products with a category from the Inventory page.</p>
         </div>
@@ -121,8 +101,8 @@ export default function CategoriesPage() {
               className="group rounded-2xl border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-brand-300 hover:shadow-md hover:-translate-y-0.5"
             >
               <div className="flex items-center gap-3 mb-4">
-                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-2xl group-hover:bg-brand-100 transition">
-                  {getCategoryIcon(name)}
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-brand-50 text-lg font-bold text-brand-600 group-hover:bg-brand-100 transition">
+                  {getCategoryInitial(name)}
                 </div>
                 <div className="min-w-0">
                   <p className="font-semibold text-slate-900 truncate">{name}</p>

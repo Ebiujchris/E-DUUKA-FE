@@ -307,19 +307,19 @@ export default function SalesPage() {
                   <option value="">Select a product</option>
                   {categoryProducts.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} · stock {p.stockQuantity}{p.stockQuantity === 0 ? ' ⚠️ OUT' : p.lowStockThreshold && p.stockQuantity <= p.lowStockThreshold ? ' ⚠️ LOW' : ''}
+                      {p.name} · stock {p.stockQuantity}{p.stockQuantity === 0 ? ' OUT' : p.lowStockThreshold && p.stockQuantity <= p.lowStockThreshold ? ' LOW' : ''}
                     </option>
                   ))}
                 </select>
                 {/* Stock warning badge */}
                 {selectedProduct && selectedProduct.stockQuantity === 0 && (
                   <div className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-red-50 border border-red-200 px-3 py-1.5 text-xs font-medium text-red-600">
-                    ⚠️ Out of stock — sale will be blocked
+                    Warning: Out of stock — sale will be blocked
                   </div>
                 )}
                 {selectedProduct && selectedProduct.stockQuantity > 0 && selectedProduct.lowStockThreshold && selectedProduct.stockQuantity <= selectedProduct.lowStockThreshold && (
                   <div className="mt-1.5 flex items-center gap-1.5 rounded-lg bg-amber-50 border border-amber-200 px-3 py-1.5 text-xs font-medium text-amber-600">
-                    ⚠️ Low stock — only {selectedProduct.stockQuantity} left
+                    Warning: Low stock — only {selectedProduct.stockQuantity} left
                   </div>
                 )}
               </div>
@@ -360,7 +360,7 @@ export default function SalesPage() {
                       <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
                       <button type="button" onClick={() => updateCartQty(item.key, item.quantity + 1)} className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 text-sm font-bold">+</button>
                       <span className="w-20 text-right text-sm font-semibold text-slate-900">{fmt(item.quantity * item.unitPrice)}</span>
-                      <button type="button" onClick={() => removeFromCart(item.key)} className="ml-1 text-red-400 hover:text-red-600 text-xs">✕</button>
+                      <button type="button" onClick={() => removeFromCart(item.key)} className="ml-1 text-red-400 hover:text-red-600 text-xs">Remove</button>
                     </div>
                   </div>
                 ))}
@@ -376,9 +376,9 @@ export default function SalesPage() {
                 <input className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Customer name (optional)" value={cartCustomer} onChange={(e) => setCartCustomer(e.target.value)} />
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { value: 'cash', label: '💵 Cash' },
-                    { value: 'credit', label: '📋 Credit' },
-                    { value: 'mobile_money', label: '📱 Mobile' },
+                    { value: 'cash', label: 'Cash' },
+                    { value: 'credit', label: 'Credit' },
+                    { value: 'mobile_money', label: 'Mobile' },
                   ].map(opt => (
                     <button
                       key={opt.value}

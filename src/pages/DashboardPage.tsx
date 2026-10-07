@@ -116,7 +116,7 @@ export default function DashboardPage() {
           <div className="flex flex-col sm:flex-row gap-3">
             {lowStock.length > 0 && (
               <Link to="/restock" className="flex-1 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100 transition">
-                <span className="text-xl">⚠️</span>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-xs font-bold text-amber-700">!</div>
                 <div className="min-w-0">
                   <p className="text-sm font-semibold text-amber-800">{lowStock.length} product{lowStock.length > 1 ? 's' : ''} low/out of stock</p>
                   <p className="text-xs text-amber-600 truncate">{lowStock.map(p => p.name).join(', ')}</p>
@@ -126,7 +126,7 @@ export default function DashboardPage() {
             )}
             {outstanding > 0 && (
               <Link to="/credits" className="flex-1 flex items-center gap-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 hover:bg-red-100 transition">
-                <span className="text-xl">💰</span>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-red-100 text-xs font-bold text-red-700">$</div>
                 <div>
                   <p className="text-sm font-semibold text-red-800">Outstanding credit debt</p>
                   <p className="text-xs text-red-600">{fc(outstanding)} owed to you</p>

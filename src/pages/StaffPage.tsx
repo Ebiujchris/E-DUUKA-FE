@@ -375,12 +375,12 @@ export default function StaffPage() {
                         </div>
                         <p className="mt-0.5 text-xs text-slate-500">{member.phone}</p>
                         <div className="mt-1 flex flex-wrap gap-2">
-                          {member.canViewDashboard   && <span className="text-xs text-slate-400">📊 Dashboard</span>}
-                          {member.canMakeSales       && <span className="text-xs text-slate-400">💰 Sales</span>}
-                          {member.canAccessInventory && <span className="text-xs text-slate-400">📦 Inventory</span>}
-                          {member.canApproveCredits  && <span className="text-xs text-slate-400">✅ Credits</span>}
-                          {member.canManageExpenses  && <span className="text-xs text-slate-400">💸 Expenses</span>}
-                          {member.canViewReports     && <span className="text-xs text-slate-400">� Reports</span>}
+                          {member.canViewDashboard   && <span className="text-xs text-slate-400">Dashboard</span>}
+                          {member.canMakeSales       && <span className="text-xs text-slate-400">Sales</span>}
+                          {member.canAccessInventory && <span className="text-xs text-slate-400">Inventory</span>}
+                          {member.canApproveCredits  && <span className="text-xs text-slate-400">Credits</span>}
+                          {member.canManageExpenses  && <span className="text-xs text-slate-400">Expenses</span>}
+                          {member.canViewReports     && <span className="text-xs text-slate-400">Reports</span>}
                         </div>
                       </div>
                       <div className="shrink-0 text-right space-y-1">

@@ -299,7 +299,7 @@ export default function BalanceSheetPage() {
                   </div>
                 )}
                 {bs.liabilities.supplierBreakdown.length === 0 && (
-                  <p className="text-xs text-emerald-600">✓ No outstanding supplier debt</p>
+                  <p className="text-xs text-emerald-600">No outstanding supplier debt</p>
                 )}
                 <div className="flex items-center justify-between rounded-xl bg-red-50 px-4 py-3 border border-red-200">
                   <p className="text-sm font-bold text-slate-900">Total Liabilities</p>

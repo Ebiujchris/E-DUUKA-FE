@@ -252,7 +252,7 @@ export default function ReceiptsPage() {
                           </div>
                           <button type="button" onClick={() => printReceipt(group, user?.shopName ?? '')}
                             className="flex items-center gap-1.5 rounded-xl bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow shadow-brand-500/20 hover:bg-brand-600 transition">
-                            🖨 Print
+                            Print
                           </button>
                         </div>
                       </div>
