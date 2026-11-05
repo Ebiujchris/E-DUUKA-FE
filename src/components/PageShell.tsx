@@ -11,10 +11,12 @@ interface PageShellProps {
 interface NavItem {
   label: string;
   path: string;
+  icon?: string;
 }
 
 interface NavGroup {
   group: string;
+  icon: string;
   items: NavItem[];
 }
 
@@ -25,34 +27,36 @@ function isGroup(entry: NavEntry): entry is NavGroup {
 }
 
 const ALL_NAV: NavEntry[] = [
-  { label: 'Overview',  path: '/dashboard' },
-  { label: 'Subscription', path: '/subscription' },
-  { label: 'Sales',     path: '/sales' },
-  { label: 'Receipts',  path: '/receipts' },
-  { label: 'Credits',   path: '/credits' },
-  { label: 'Expenses',  path: '/expenses' },
+  { label: 'Overview',  path: '/dashboard', icon: '◫' },
+  { label: 'Subscription', path: '/subscription', icon: '◇' },
+  { label: 'Sales',     path: '/sales', icon: '↗' },
+  { label: 'Receipts',  path: '/receipts', icon: '▤' },
+  { label: 'Credits',   path: '/credits', icon: '◷' },
+  { label: 'Expenses',  path: '/expenses', icon: '−' },
   {
     group: 'Inventory',
+    icon: '▦',
     items: [
-      { label: 'Products',   path: '/products' },
-      { label: 'Categories', path: '/categories' },
-      { label: 'Brands',     path: '/brands' },
-      { label: 'Restock',    path: '/restock' },
-      { label: 'Suppliers',  path: '/suppliers' },
+      { label: 'Products',   path: '/products', icon: '□' },
+      { label: 'Categories', path: '/categories', icon: '▧' },
+      { label: 'Brands',     path: '/brands', icon: '◇' },
+      { label: 'Restock',    path: '/restock', icon: '↻' },
+      { label: 'Suppliers',  path: '/suppliers', icon: '♧' },
     ],
   },
-  { label: 'Reports', path: '/reports' },
-  { label: 'Activity', path: '/activity' },
+  { label: 'Reports', path: '/reports', icon: '▥' },
+  { label: 'Activity', path: '/activity', icon: '⌁' },
   {
     group: 'Financials',
+    icon: '◉',
     items: [
-      { label: 'Balance Sheet', path: '/balance-sheet' },
-      { label: 'Cash Flow',     path: '/cash-flow' },
-      { label: 'Comparison',    path: '/income-comparison' },
+      { label: 'Balance Sheet', path: '/balance-sheet', icon: '▤' },
+      { label: 'Cash Flow',     path: '/cash-flow', icon: '↗' },
+      { label: 'Comparison',    path: '/income-comparison', icon: '⇄' },
     ],
   },
-  { label: 'Staff',    path: '/staff' },
-  { label: 'Settings', path: '/settings' },
+  { label: 'Staff',    path: '/staff', icon: '♙' },
+  { label: 'Settings', path: '/settings', icon: '⚙' },
 ];
 
 const INVENTORY_PATHS = ['/products', '/categories', '/brands', '/restock', '/suppliers'];
@@ -86,13 +90,13 @@ export default function PageShell({ title, description, children }: PageShellPro
               <button
                 type="button"
                 onClick={() => toggleGroup(entry.group)}
-                className={`w-full flex items-center justify-between rounded-xl px-3 py-2 text-sm font-medium transition ${
+                className={`w-full flex items-center justify-between rounded-xl px-3 py-2.5 text-[15px] font-semibold transition ${
                   hasActive
-                    ? 'bg-brand-50 text-brand-700'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-brand-50 text-brand-800 ring-1 ring-brand-100'
+                    : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950'
                 }`}
               >
-                <span>{entry.group}</span>
+                <span className="flex items-center gap-3"><span className="grid h-7 w-7 place-items-center rounded-lg bg-slate-100 text-base text-slate-600">{entry.icon}</span>{entry.group}</span>
                 <span className={`text-xs transition-transform duration-200 inline-block ${isOpen ? 'rotate-90' : ''}`}>›</span>
               </button>
               {isOpen && (
@@ -103,14 +107,14 @@ export default function PageShell({ title, description, children }: PageShellPro
                       to={item.path}
                       onClick={onClick}
                       className={({ isActive }) =>
-                        `flex items-center rounded-xl px-3 py-2 text-sm font-medium transition ${
+                        `flex items-center rounded-xl px-3 py-2.5 text-[15px] font-medium transition ${
                           isActive
-                            ? 'bg-brand-50 text-brand-700'
-                            : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900'
+                            ? 'bg-brand-50 font-semibold text-brand-800 ring-1 ring-brand-100'
+                            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950'
                         }`
                       }
                     >
-                      {item.label}
+                      <span className="mr-3 w-5 text-center text-base text-brand-600">{item.icon}</span>{item.label}
                     </NavLink>
                   ))}
                 </div>
@@ -124,14 +128,14 @@ export default function PageShell({ title, description, children }: PageShellPro
             to={entry.path}
             onClick={onClick}
             className={({ isActive }) =>
-              `flex items-center rounded-xl px-3 py-2 text-sm font-medium transition ${
+              `flex items-center rounded-xl px-3 py-2.5 text-[15px] font-medium transition ${
                 isActive
-                  ? 'bg-brand-50 text-brand-700'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                  ? 'bg-brand-50 font-semibold text-brand-800 ring-1 ring-brand-100'
+                  : 'text-slate-700 hover:bg-slate-100 hover:text-slate-950'
               }`
             }
           >
-            {entry.label}
+            <span className="mr-3 grid h-7 w-7 place-items-center rounded-lg bg-slate-100 text-base text-brand-700">{entry.icon}</span>{entry.label}
           </NavLink>
         );
       })}
@@ -156,7 +160,7 @@ export default function PageShell({ title, description, children }: PageShellPro
 
           <div className="flex items-center gap-2">
             <div className="hidden sm:flex flex-col items-end mr-1">
-              <span className="text-xs font-medium text-slate-700">{user?.name}</span>
+              <span className="text-sm font-semibold text-slate-700">{user?.name}</span>
             </div>
             <button
               type="button"
@@ -207,14 +211,14 @@ export default function PageShell({ title, description, children }: PageShellPro
       <div className="flex min-h-[calc(100vh-57px)]">
 
         {/* Desktop sidebar */}
-        <aside className="hidden lg:flex lg:w-52 lg:shrink-0 lg:flex-col border-r border-slate-200/80 bg-white/90 backdrop-blur p-4">
+        <aside className="hidden lg:flex lg:w-60 lg:shrink-0 lg:flex-col border-r border-slate-200/80 bg-white/95 p-4 backdrop-blur">
           <div className="rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 p-3 text-white shadow shadow-brand-500/20">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-100">Store hub</p>
-            <p className="mt-0.5 text-xs font-semibold">Run your shop smartly.</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-brand-100">Store hub</p>
+            <p className="mt-1 text-sm font-semibold">Run your shop smartly.</p>
           </div>
           {user?.name && (
-            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-              <p className="text-xs font-semibold text-slate-800 truncate">{user.name}</p>
+            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+              <p className="text-sm font-semibold text-slate-800 truncate">{user.name}</p>
             </div>
           )}
           <nav className="mt-2 flex-1 space-y-0.5 overflow-y-auto">
@@ -225,9 +229,9 @@ export default function PageShell({ title, description, children }: PageShellPro
         {/* Main content */}
         <main className="flex-1 min-w-0 bg-white/90 backdrop-blur p-4 sm:p-6">
           <div className="mb-5 border-b border-slate-200 pb-4">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-brand-600">E-DUUKA</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-brand-700">E-DUUKA</p>
             <h1 className="mt-1 text-2xl font-bold text-slate-900">{title}</h1>
-            {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
+            {description && <p className="mt-1 text-base text-slate-600">{description}</p>}
           </div>
           {children}
         </main>
