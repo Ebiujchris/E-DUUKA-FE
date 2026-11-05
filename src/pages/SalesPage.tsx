@@ -55,7 +55,7 @@ export default function SalesPage() {
   const [pickerPrice, setPickerPrice] = useState('');
   const [productSearch, setProductSearch] = useState('');
 
-  const [filter, setFilter] = useState<'all' | 'cash' | 'credit'>('all');
+  const [filter, setFilter] = useState<'all' | 'cash' | 'credit' | 'mobile_money'>('all');
   const [search, setSearch] = useState('');
   const [staffFilter, setStaffFilter] = useState('all');
   const [txPage, setTxPage] = useState(1);
@@ -236,27 +236,56 @@ export default function SalesPage() {
   const totalTxPages = Math.max(1, Math.ceil(filteredSales.length / TX_PAGE_SIZE));
   const visibleSales = filteredSales.slice((txPage - 1) * TX_PAGE_SIZE, txPage * TX_PAGE_SIZE);
   const loading = prodLoading || salesLoading;
+  const completedSales = sales.filter((sale) => sale.status !== 'voided');
+  const completedRevenue = completedSales.reduce((sum, sale) => sum + Number(sale.totalAmount), 0);
+  const creditRevenue = completedSales
+    .filter((sale) => sale.paymentType === 'credit')
+    .reduce((sum, sale) => sum + Number(sale.totalAmount), 0);
 
   // selected product for stock warning
   const selectedProduct = products.find(p => p.id === pickerProductId);
 
   return (
-    <PageShell title="Sales" description="Build a cart, then checkout all items at once.">
-      <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-center">
+    <PageShell title="Sales" description="Create a sale, take payment, and keep track of every transaction.">
+      <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <div className="rounded-2xl border border-[#dfe9df] bg-gradient-to-br from-[#eef7ef] to-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#64806c]">Completed transactions</p>
+          <p className="mt-2 font-display text-2xl font-semibold text-[#214b32]">{completedSales.length.toLocaleString()}</p>
+          <p className="mt-1 text-xs text-slate-500">Voided sales excluded</p>
+        </div>
+        <div className="rounded-2xl border border-[#e7e8d9] bg-gradient-to-br from-[#faf8ed] to-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#89764b]">Recorded sales value</p>
+          <p className="mt-2 font-display text-2xl font-semibold text-slate-900">{fmt(completedRevenue)}</p>
+          <p className="mt-1 text-xs text-slate-500">Across all recorded transactions</p>
+        </div>
+        <div className="rounded-2xl border border-[#e4e6f0] bg-gradient-to-br from-[#f1f3fa] to-white p-4">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#6a708d]">Credit sales value</p>
+          <p className="mt-2 font-display text-2xl font-semibold text-slate-900">{fmt(creditRevenue)}</p>
+          <p className="mt-1 text-xs text-slate-500">Recorded credit transactions</p>
+        </div>
+      </div>
+
+      <div className="grid min-w-0 grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1.08fr)_minmax(390px,.92fr)]">
 
         {/* ── Cart builder ── */}
-        <div className="space-y-4 w-full lg:w-[640px] lg:shrink-0">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
-            <h2 className="text-lg font-semibold text-slate-900">Add item to cart</h2>
-            <div className="mt-4 space-y-3">
+        <div className="min-w-0 space-y-5">
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center gap-3 border-b border-[#e9eee8] bg-gradient-to-r from-[#f4f9f4] to-white px-5 py-4">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#e5f1e7] text-lg font-bold text-[#39815a]" aria-hidden="true">＋</span>
+              <div>
+                <h2 className="font-display text-lg font-semibold text-slate-900">Add items</h2>
+                <p className="mt-0.5 text-sm text-slate-500">Choose products and set the quantity and price.</p>
+              </div>
+            </div>
+            <div className="space-y-4 p-5">
 
               {/* Category picker */}
               <div>
-                <label className="text-xs text-slate-500 mb-1 block">Category</label>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Category</label>
                 <div className="flex flex-wrap gap-2">
                   {allCategories.map((cat) => (
                     <button key={cat} type="button" onClick={() => handleCategoryChange(cat)}
-                      className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${pickerCategory === cat ? 'bg-brand-500 text-white' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}>
+                      className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${pickerCategory === cat ? 'border-[#23845b] bg-[#23845b] text-white shadow-sm' : 'border-slate-200 bg-white text-slate-600 hover:border-[#b8d2bf] hover:bg-[#f5faf5]'}`}>
                       {cat === '__all__' ? `All (${products.length})` : `${cat} (${products.filter(p => (p.category ?? 'Uncategorized') === cat).length})`}
                     </button>
                   ))}
@@ -272,15 +301,15 @@ export default function SalesPage() {
                 if (brands.length === 0) return null;
                 return (
                   <div>
-                    <label className="text-xs text-slate-500 mb-1 block">Brand</label>
+                    <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Brand</label>
                     <div className="flex flex-wrap gap-2">
                       <button type="button" onClick={() => handleBrandChange('__all__')}
-                        className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${pickerBrand === '__all__' ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}>
+                        className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${pickerBrand === '__all__' ? 'border-[#23845b] bg-[#23845b] text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-[#b8d2bf]'}`}>
                         All
                       </button>
                       {brands.map(brand => (
                         <button key={brand} type="button" onClick={() => handleBrandChange(brand)}
-                          className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${pickerBrand === brand ? 'bg-blue-500 text-white' : 'bg-slate-200 text-slate-600 hover:bg-slate-300'}`}>
+                          className={`rounded-full border px-3 py-2 text-xs font-semibold transition ${pickerBrand === brand ? 'border-[#23845b] bg-[#23845b] text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-[#b8d2bf]'}`}>
                           {brand} ({brandPool.filter(p => p.brand === brand).length})
                         </button>
                       ))}
@@ -291,16 +320,16 @@ export default function SalesPage() {
 
               {/* Product search + select */}
               <div>
-                <label className="text-xs text-slate-500 mb-1 block">Product</label>
+                <label className="mb-2 block text-xs font-semibold uppercase tracking-wide text-slate-500">Product</label>
                 <input
                   type="text"
                   placeholder="Search products…"
                   value={productSearch}
                   onChange={(e) => { setProductSearch(e.target.value); setPickerProductId(''); setPickerPrice(''); }}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-400 focus:outline-none mb-2"
+                  className="mb-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-400 focus:outline-none"
                 />
                 <select
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm"
                   value={pickerProductId}
                   onChange={(e) => handlePickerProduct(e.target.value)}
                 >
@@ -325,100 +354,126 @@ export default function SalesPage() {
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Quantity" type="number" min="1" value={pickerQty} onChange={(e) => setPickerQty(e.target.value)} />
-                <input className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Unit price" type="number" value={pickerPrice} onChange={(e) => setPickerPrice(e.target.value)} />
+                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">Quantity
+                  <input className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm" placeholder="1" type="number" min="1" value={pickerQty} onChange={(e) => setPickerQty(e.target.value)} />
+                </label>
+                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">Unit price (UGX)
+                  <input className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm" placeholder="0" type="number" value={pickerPrice} onChange={(e) => setPickerPrice(e.target.value)} />
+                </label>
               </div>
-              <button type="button" onClick={addToCart} className="rounded-xl border-2 border-dashed border-brand-300 px-5 py-2 text-sm font-semibold text-brand-600 hover:bg-brand-50 transition">
-                + Add to cart
+              <button type="button" onClick={addToCart} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#b8d8c0] bg-[#f2f8f2] px-5 py-2.5 text-sm font-semibold text-[#26764e] transition hover:border-[#87b596] hover:bg-[#e8f3e9]">
+                <span aria-hidden="true">＋</span> Add item to cart
               </button>
             </div>
           </div>
 
           {/* Cart */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold text-slate-900">Cart</h2>
+          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="flex items-center justify-between border-b border-[#e9eee8] px-5 py-4">
+              <div className="flex items-center gap-3">
+                <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#f4f2e8] text-lg text-[#9a8144]" aria-hidden="true">▤</span>
+                <div>
+                  <h2 className="font-display text-lg font-semibold text-slate-900">Current sale</h2>
+                  <p className="mt-0.5 text-sm text-slate-500">{cart.length} {cart.length === 1 ? 'product' : 'products'} in cart</p>
+                </div>
+              </div>
               {cart.length > 0 && (
-                <button type="button" onClick={() => setCart([])} className="text-xs text-red-400 hover:text-red-600">Clear all</button>
+                <button type="button" onClick={() => setCart([])} className="rounded-lg px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50 hover:text-red-700">Clear cart</button>
               )}
             </div>
 
             {cart.length === 0 ? (
-              <div className="mt-4 rounded-xl border border-dashed border-slate-200 p-6 text-center text-sm text-slate-400">
-                No items yet. Add products above.
+              <div className="m-5 rounded-xl border border-dashed border-[#dce7dc] bg-[#fafcf9] px-5 py-9 text-center">
+                <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-[#edf5ed] text-xl text-[#648c6d]" aria-hidden="true">＋</span>
+                <p className="mt-3 text-sm font-semibold text-slate-700">Your sale is ready to build</p>
+                <p className="mt-1 text-sm text-slate-500">Add a product to get started. It will appear here.</p>
               </div>
             ) : (
-              <div className="mt-4 space-y-2">
+              <div className="space-y-2 p-5">
                 {cart.map((item) => (
-                  <div key={item.key} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
+                  <div key={item.key} className="flex items-center justify-between gap-3 rounded-xl border border-[#e7ece6] bg-[#fbfcfa] px-3 py-3">
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-slate-900">{item.productName}</p>
-                      <p className="text-xs text-slate-500">{fmt(item.unitPrice)} each</p>
+                      <p className="truncate text-sm font-semibold text-slate-900">{item.productName}</p>
+                      <p className="mt-1 text-xs text-slate-500">{fmt(item.unitPrice)} each</p>
                     </div>
                     <div className="flex items-center gap-2 shrink-0">
-                      <button type="button" onClick={() => updateCartQty(item.key, item.quantity - 1)} className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 text-sm font-bold">−</button>
-                      <span className="w-6 text-center text-sm font-semibold">{item.quantity}</span>
-                      <button type="button" onClick={() => updateCartQty(item.key, item.quantity + 1)} className="flex h-6 w-6 items-center justify-center rounded-lg bg-slate-200 text-slate-700 hover:bg-slate-300 text-sm font-bold">+</button>
-                      <span className="w-20 text-right text-sm font-semibold text-slate-900">{fmt(item.quantity * item.unitPrice)}</span>
-                      <button type="button" onClick={() => removeFromCart(item.key)} className="ml-1 text-red-400 hover:text-red-600 text-xs">Remove</button>
+                      <button type="button" aria-label={`Decrease ${item.productName} quantity`} onClick={() => updateCartQty(item.key, item.quantity - 1)} className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-base font-semibold text-slate-600 hover:bg-slate-100">−</button>
+                      <span className="min-w-6 text-center text-sm font-semibold tabular-nums">{item.quantity}</span>
+                      <button type="button" aria-label={`Increase ${item.productName} quantity`} onClick={() => updateCartQty(item.key, item.quantity + 1)} className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-base font-semibold text-slate-600 hover:bg-slate-100">+</button>
+                      <span className="w-24 text-right text-sm font-semibold tabular-nums text-slate-900">{fmt(item.quantity * item.unitPrice)}</span>
+                      <button type="button" onClick={() => removeFromCart(item.key)} className="ml-1 rounded-lg px-2 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-50 hover:text-red-700">Remove</button>
                     </div>
                   </div>
                 ))}
-                <div className="flex items-center justify-between rounded-xl bg-slate-100 px-3 py-2.5 font-semibold">
-                  <span className="text-sm text-slate-700">{cart.reduce((s, c) => s + c.quantity, 0)} items</span>
-                  <span className="text-base text-slate-900">{fmt(cartTotal)}</span>
+                <div className="flex items-end justify-between rounded-xl bg-[#f2f7f1] px-4 py-3">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#64806c]">Sale total</p>
+                    <p className="mt-1 text-xs text-slate-500">{cart.reduce((s, c) => s + c.quantity, 0)} units</p>
+                  </div>
+                  <span className="font-display text-xl font-semibold tabular-nums text-[#214b32]">{fmt(cartTotal)}</span>
                 </div>
-              </div>
-            )}
 
-            {cart.length > 0 && (
-              <div className="mt-4 space-y-3 border-t border-slate-200 pt-4">
-                <input className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm" placeholder="Customer name (optional)" value={cartCustomer} onChange={(e) => setCartCustomer(e.target.value)} />
+              <div className="space-y-4 border-t border-[#e9eee8] px-5 pb-5 pt-4">
+                <label className="grid gap-1.5 text-xs font-semibold text-slate-600">Customer name <span className="font-normal text-slate-400">Optional</span>
+                  <input className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm" placeholder="Walk-in customer" value={cartCustomer} onChange={(e) => setCartCustomer(e.target.value)} />
+                </label>
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Payment method</p>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { value: 'cash', label: 'Cash' },
-                    { value: 'credit', label: 'Credit' },
-                    { value: 'mobile_money', label: 'Mobile' },
+                    { value: 'cash', label: 'Cash', icon: '●' },
+                    { value: 'credit', label: 'Credit', icon: '◷' },
+                    { value: 'mobile_money', label: 'Mobile money', icon: '▣' },
                   ].map(opt => (
                     <button
                       key={opt.value}
                       type="button"
+                      aria-pressed={cartPayment === opt.value}
                       onClick={() => setCartPayment(opt.value)}
-                      className={`rounded-xl border py-2 text-xs font-semibold transition ${
+                      className={`flex min-h-11 items-center justify-center gap-2 rounded-xl border px-2 py-2 text-xs font-semibold transition ${
                         cartPayment === opt.value
-                          ? 'border-brand-500 bg-brand-50 text-brand-700'
-                          : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                          ? 'border-[#78ad88] bg-[#eff7ef] text-[#26764e] ring-1 ring-[#78ad88]/30'
+                          : 'border-slate-200 bg-white text-slate-600 hover:border-[#b8d2bf] hover:bg-[#f8fbf8]'
                       }`}
                     >
-                      {opt.label}
+                      <span aria-hidden="true">{opt.icon}</span><span>{opt.label}</span>
                     </button>
                   ))}
                 </div>
+                </div>
                 <button type="button" onClick={handleCheckout} disabled={submitting}
-                  className="w-full rounded-xl bg-brand-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-500/20 disabled:opacity-60 transition hover:bg-brand-600 sticky bottom-4">
-                  {submitting ? 'Processing…' : `Checkout — ${fmt(cartTotal)}`}
+                  className="w-full rounded-xl bg-[#23845b] px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-green-900/15 transition hover:bg-[#176844] disabled:cursor-wait disabled:opacity-60">
+                  {submitting ? 'Processing sale…' : `Complete sale · ${fmt(cartTotal)}`}
                 </button>
+              </div>
               </div>
             )}
           </div>
         </div>
 
         {/* ── Sales history ── */}
-        <div className="rounded-2xl border border-slate-200 p-5 w-full lg:max-w-xl">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-slate-900">Transactions</h2>
-            <span className="text-sm text-slate-500">{filteredSales.length} of {sales.length}</span>
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <div className="flex items-center justify-between border-b border-[#e9eee8] bg-gradient-to-r from-[#f7faf6] to-white px-5 py-4">
+            <div className="flex items-center gap-3">
+              <span className="grid h-10 w-10 place-items-center rounded-xl bg-[#eaf1f7] text-lg text-[#587995]" aria-hidden="true">↗</span>
+              <div>
+                <h2 className="font-display text-lg font-semibold text-slate-900">Transactions</h2>
+                <p className="mt-0.5 text-sm text-slate-500">Search and review sales history</p>
+              </div>
+            </div>
+            <span className="rounded-full bg-[#f0f4ef] px-3 py-1.5 text-xs font-semibold tabular-nums text-slate-600">{filteredSales.length} / {sales.length}</span>
           </div>
 
-          <div className="mt-4 space-y-3">
-            <input className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none" placeholder="Search buyer or product..." value={search} onChange={(e) => { setSearch(e.target.value); setTxPage(1); }} />
-            <div className="flex gap-2 flex-wrap">
-              {(['all', 'cash', 'credit'] as const).map((f) => (
+          <div className="space-y-4 p-5">
+            <input aria-label="Search transactions" className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-400 focus:outline-none" placeholder="Search by customer, product or payment…" value={search} onChange={(e) => { setSearch(e.target.value); setTxPage(1); }} />
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {(['all', 'cash', 'credit', 'mobile_money'] as const).map((f) => (
                 <button key={f} type="button" onClick={() => { setFilter(f); setTxPage(1); }}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-medium transition ${filter === f ? 'bg-brand-500 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                  className={`shrink-0 rounded-full border px-3 py-2 text-xs font-semibold transition ${filter === f ? 'border-[#23845b] bg-[#23845b] text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-[#b8d2bf] hover:bg-[#f7faf7]'}`}>
                   {f === 'all' && `All (${sales.length})`}
                   {f === 'cash' && `Cash (${sales.filter((s) => s.paymentType === 'cash').length})`}
                   {f === 'credit' && `Credit (${sales.filter((s) => s.paymentType === 'credit').length})`}
+                  {f === 'mobile_money' && `Mobile (${sales.filter((s) => s.paymentType === 'mobile_money').length})`}
                 </button>
               ))}
             </div>
@@ -426,7 +481,7 @@ export default function SalesPage() {
               <div>
                 <label className="text-xs text-slate-500 mb-1 block">Sale by</label>
                 <select
-                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm focus:border-brand-400 focus:outline-none"
                   value={staffFilter}
                   onChange={(e) => { setStaffFilter(e.target.value); setTxPage(1); }}
                 >
@@ -453,51 +508,51 @@ export default function SalesPage() {
               </div>
             ) : (
               <>
-                <div className="mt-4 space-y-2">
+                <div className="space-y-2">
                   {visibleSales.map((sale) => {
                     const isCredit = sale.paymentType === 'credit';
                     const isMobile = sale.paymentType === 'mobile_money';
                     const isVoided = sale.status === 'voided';
                     return (
-                      <div key={sale.id} className={`rounded-xl border p-3 transition ${isVoided ? 'border-slate-200 bg-slate-100 opacity-60' : isCredit ? 'border-amber-200 bg-amber-50' : isMobile ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-slate-50'}`}>
+                      <div key={sale.id} className={`rounded-xl border p-3.5 transition ${isVoided ? 'border-slate-200 bg-slate-100 opacity-60' : 'border-[#e7ece6] bg-white hover:border-[#cbdccb] hover:bg-[#fbfdfb]'}`}>
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <p className="truncate font-medium text-slate-900">{sale.product?.name ?? 'Product'}</p>
-                              <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${isCredit ? 'bg-amber-100 text-amber-600' : isMobile ? 'bg-blue-100 text-blue-600' : 'bg-emerald-100 text-emerald-600'}`}>
-                                {sale.paymentType.replace('_', ' ')}
+                              <p className="truncate text-sm font-semibold text-slate-900">{sale.product?.name ?? 'Product'}</p>
+                              <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold ${isCredit ? 'bg-amber-50 text-amber-700' : isMobile ? 'bg-blue-50 text-blue-700' : 'bg-[#edf6ee] text-[#28764c]'}`}>
+                                {isCredit ? 'Credit' : isMobile ? 'Mobile money' : 'Cash'}
                               </span>
-                              {isVoided && <span className="shrink-0 rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-500">voided</span>}
+                              {isVoided && <span className="shrink-0 rounded-full bg-red-50 px-2.5 py-1 text-[11px] font-semibold text-red-600">Voided</span>}
                             </div>
-                            <p className="mt-0.5 text-xs text-slate-500">{sale.quantity} units · {sale.customerName ?? 'Walk-in customer'}</p>
+                            <p className="mt-1.5 text-xs text-slate-600">{sale.quantity} {Number(sale.quantity) === 1 ? 'unit' : 'units'} <span className="mx-1 text-slate-300">·</span> {sale.customerName ?? 'Walk-in customer'}</p>
                             {(sale.createdByStaffName || sale.createdByStaffId) && (
-                              <p className="text-xs text-slate-400">
-                                By: {sale.createdByStaffName || `Staff-${sale.createdByStaffId?.slice(0, 8)}`}
+                              <p className="mt-1 text-xs text-slate-500">
+                                Sold by {sale.createdByStaffName || `Staff-${sale.createdByStaffId?.slice(0, 8)}`}
                               </p>
                             )}
-                            <p className="text-xs text-slate-400">{new Date(sale.createdAt).toLocaleString()}</p>
+                            <p className="mt-1 text-xs text-slate-400">{new Date(sale.createdAt).toLocaleString()}</p>
                           </div>
                           <div className="shrink-0 text-right">
-                            <p className={`font-semibold ${isVoided ? 'line-through text-slate-400' : 'text-slate-900'}`}>{fmt(sale.totalAmount)}</p>
+                            <p className={`font-display text-base font-semibold tabular-nums ${isVoided ? 'line-through text-slate-400' : 'text-slate-900'}`}>{fmt(sale.totalAmount)}</p>
                             {!isVoided && (
                               <button type="button"
                                 onClick={() => { setVoidingId(voidingId === sale.id ? null : sale.id); setVoidReason(''); }}
-                                className="mt-1 text-xs text-slate-400 hover:text-red-500 transition">
+                                className="mt-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:border-red-200 hover:bg-red-50 hover:text-red-600">
                                 Void
                               </button>
                             )}
                           </div>
                         </div>
                         {voidingId === sale.id && (
-                          <div className="mt-3 border-t border-slate-200 pt-3 flex items-center gap-2">
+                          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-200 pt-3">
                             <input autoFocus type="text" placeholder="Reason for void"
-                              className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm focus:border-red-400 focus:outline-none"
+                              className="min-w-40 flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-red-400 focus:outline-none"
                               value={voidReason} onChange={(e) => setVoidReason(e.target.value)} />
                             <button type="button" onClick={() => handleVoid(sale.id)} disabled={submitting}
-                              className="rounded-xl bg-red-500 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-600 disabled:opacity-60">
+                              className="rounded-xl bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-60">
                               {submitting ? '…' : 'Confirm'}
                             </button>
-                            <button type="button" onClick={() => setVoidingId(null)} className="text-xs text-slate-400 hover:text-slate-600">Cancel</button>
+                            <button type="button" onClick={() => setVoidingId(null)} className="rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-700">Cancel</button>
                           </div>
                         )}
                       </div>
