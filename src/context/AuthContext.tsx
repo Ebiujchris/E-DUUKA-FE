@@ -12,6 +12,7 @@ import { api, type User } from '../lib/api';
 
 interface AuthContextValue {
   user: User | null;
+  subscriptionExpiredMessage: string | null;
   isAuthenticated: boolean;
   loading: boolean;
   login: (phone: string, password: string) => Promise<void>;
@@ -31,6 +32,7 @@ const USER_KEY = 'userData';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
+  const [subscriptionExpiredMessage, setSubscriptionExpiredMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const sessionVersionRef = useRef(0);
 
@@ -97,9 +99,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     };
 
     // Handle token expiry dispatched by ApiService
-    const handleExpired = () => {
+    const handleExpired = (event: Event) => {
+      const message = (event as CustomEvent<{ message?: string }>).detail?.message;
       sessionVersionRef.current += 1;
       setUser(null);
+      setSubscriptionExpiredMessage(
+        message && /subscription.*expired/i.test(message) ? message : null,
+      );
       setLoading(false);
     };
 
@@ -126,6 +132,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(
     async (phone: string, password: string) => {
       clearSession();
+      setSubscriptionExpiredMessage(null);
       const version = ++sessionVersionRef.current;
       setLoading(true);
 
@@ -174,18 +181,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = useCallback(() => {
     clearSession();
+    setSubscriptionExpiredMessage(null);
   }, [clearSession]);
 
   const value = useMemo(
     () => ({
       user,
+      subscriptionExpiredMessage,
       isAuthenticated: !!user,
       loading,
       login,
       register,
       logout,
     }),
-    [user, loading, login, register, logout],
+    [user, subscriptionExpiredMessage, loading, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

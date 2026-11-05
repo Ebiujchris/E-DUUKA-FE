@@ -1,9 +1,10 @@
 import { lazy, Suspense, type ReactNode } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Link, Navigate, Route, Routes } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 
 const LandingPage = lazy(() => import('./pages/LandingPage'));
 const DashboardPage = lazy(() => import('./pages/DashboardPage'));
+const SubscriptionPage = lazy(() => import('./pages/SubscriptionPage'));
 const ProductsPage = lazy(() => import('./pages/ProductsPage'));
 const SalesPage = lazy(() => import('./pages/SalesPage'));
 const ReportsPage = lazy(() => import('./pages/ReportsPage'));
@@ -24,7 +25,7 @@ const ActivityPage = lazy(() => import('./pages/ActivityPage'));
 type RequiredPermission = 'canViewDashboard' | 'canMakeSales' | 'canApproveCredits' | 'canAccessInventory' | 'canManageExpenses' | 'canViewReports';
 
 function ProtectedRoute({ children, requiredPermission }: { children: ReactNode; requiredPermission?: RequiredPermission }) {
-  const { isAuthenticated, loading, user } = useAuth();
+  const { isAuthenticated, loading, user, subscriptionExpiredMessage } = useAuth();
 
   if (loading) {
     return (
@@ -37,6 +38,19 @@ function ProtectedRoute({ children, requiredPermission }: { children: ReactNode;
   }
 
   if (!isAuthenticated) {
+    if (subscriptionExpiredMessage) {
+      return (
+        <main className="flex min-h-screen items-center justify-center bg-amber-50 px-4 py-10">
+          <section className="w-full max-w-xl rounded-3xl border border-amber-200 bg-white p-7 shadow-xl sm:p-9">
+            <p className="text-xs font-bold uppercase tracking-widest text-amber-700">Subscription renewal required</p>
+            <h1 className="mt-3 text-2xl font-bold text-slate-900">Your shop access is paused</h1>
+            <p className="mt-3 text-sm leading-6 text-slate-600">{subscriptionExpiredMessage}</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">Please arrange payment with your E-Duuka administrator. Access will be restored after your renewal is confirmed.</p>
+            <Link to="/" className="mt-6 inline-flex rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white hover:bg-brand-700">Back to sign in</Link>
+          </section>
+        </main>
+      );
+    }
     return <Navigate to="/" replace />;
   }
 
@@ -71,6 +85,14 @@ export default function App() {
           element={
             <ProtectedRoute requiredPermission="canViewDashboard">
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/subscription"
+          element={
+            <ProtectedRoute>
+              <SubscriptionPage />
             </ProtectedRoute>
           }
         />

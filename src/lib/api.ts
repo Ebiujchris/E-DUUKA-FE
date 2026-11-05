@@ -39,7 +39,26 @@ export interface DashboardData {
   month: { sales: number; profit: number; transactions: number; profitMargin: number };
   inventory: { lowStockCount: number; lowStockProducts: Array<{ id: string; name: string; stock: number; sellingPrice?: number }> };
   credits: { totalOutstanding: number; pendingCount: number; overdueCount: number };
+  subscription: {
+    plan: string;
+    amount: number;
+    currency: string;
+    billingInterval: string;
+    status: string;
+    startedAt?: string | null;
+    endsAt?: string | null;
+  } | null;
   recentActivity: Array<{ id: string; type: string; description: string; amount: number; paymentType?: string; createdAt: string }>;
+}
+
+export interface SubscriptionPaymentStatus {
+  configured: boolean;
+  message: string;
+}
+
+export interface SubscriptionCheckout {
+  checkoutUrl: string;
+  reference: string;
 }
 
 export class ApiError extends Error {
@@ -86,13 +105,13 @@ class ApiService {
     return h;
   }
 
-  private handleUnauthorized() {
+  private handleUnauthorized(message: string) {
     this.token = null;
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('authToken');
       window.localStorage.removeItem('userData');
       // Dispatch event so AuthContext can react
-      window.dispatchEvent(new CustomEvent('auth:expired'));
+      window.dispatchEvent(new CustomEvent('auth:expired', { detail: { message } }));
     }
   }
 
@@ -130,8 +149,12 @@ class ApiService {
       }
 
       if (response.status === 401) {
-        this.handleUnauthorized();
-        throw new ApiError('Session expired. Please sign in again.', 401);
+        const body = await response.clone().json().catch(() => ({}));
+        const message = Array.isArray(body.message)
+          ? body.message[0]
+          : body.message || 'Session expired. Please sign in again.';
+        this.handleUnauthorized(message);
+        throw new ApiError(message, 401);
       }
 
       if (!response.ok) {
@@ -185,6 +208,17 @@ class ApiService {
 
   getDashboardData() {
     return this.request<DashboardData>('/dashboard', { cacheable: true });
+  }
+
+  getSubscriptionPaymentStatus() {
+    return this.request<SubscriptionPaymentStatus>('/subscription/payment/status');
+  }
+
+  createSubscriptionCheckout() {
+    return this.request<SubscriptionCheckout>('/subscription/payment/checkout', {
+      method: 'POST',
+      body: JSON.stringify({}),
+    });
   }
 
   getDashboardAnalytics(period: 'week' | 'month' | 'year' = 'month') {

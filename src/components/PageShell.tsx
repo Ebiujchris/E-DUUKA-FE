@@ -26,6 +26,7 @@ function isGroup(entry: NavEntry): entry is NavGroup {
 
 const ALL_NAV: NavEntry[] = [
   { label: 'Overview',  path: '/dashboard' },
+  { label: 'Subscription', path: '/subscription' },
   { label: 'Sales',     path: '/sales' },
   { label: 'Receipts',  path: '/receipts' },
   { label: 'Credits',   path: '/credits' },

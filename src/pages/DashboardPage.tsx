@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PageShell from '../components/PageShell';
-import { API_URL, authHeader } from '../lib/api';
+import { API_URL, api, authHeader } from '../lib/api';
 
 const fc = (n: number | null | undefined) => {
   const v = Number.isFinite(Number(n)) ? Number(n) : 0;
@@ -19,6 +19,14 @@ interface TodayStats {
 }
 
 interface LowStockProduct { id: string; name: string; stock: number }
+interface SubscriptionInfo {
+  plan: string;
+  amount: number;
+  currency: string;
+  billingInterval: string;
+  status: string;
+  endsAt?: string | null;
+}
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -27,6 +35,7 @@ export default function DashboardPage() {
   const [monthRev, setMonthRev] = useState<number>(0);
   const [lowStock, setLowStock] = useState<LowStockProduct[]>([]);
   const [outstanding, setOutstanding] = useState<number>(0);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading]   = useState(true);
 
   useEffect(() => {
@@ -47,13 +56,14 @@ export default function DashboardPage() {
     const load = async () => {
       setLoading(true);
       try {
-        const [sToday, sWeek, sMonth, eToday, credStats, lsRes] = await Promise.all([
+        const [sToday, sWeek, sMonth, eToday, credStats, lsRes, dashboardRes] = await Promise.all([
           fetch(`${API_URL}/sales/range?startDate=${enc(todayStart.toISOString())}&endDate=${enc(todayEnd.toISOString())}`, { headers: h }).then(r => r.ok ? r.json() : []),
           fetch(`${API_URL}/sales/range?startDate=${enc(weekStart.toISOString())}&endDate=${enc(todayEnd.toISOString())}`, { headers: h }).then(r => r.ok ? r.json() : []),
           fetch(`${API_URL}/sales/range?startDate=${enc(monthStart.toISOString())}&endDate=${enc(monthEnd.toISOString())}`, { headers: h }).then(r => r.ok ? r.json() : []),
           fetch(`${API_URL}/expenses/by-date-range?startDate=${enc(todayStart.toISOString())}&endDate=${enc(todayEnd.toISOString())}`, { headers: h }).then(r => r.ok ? r.json() : []),
           fetch(`${API_URL}/credits/stats`, { headers: h }).then(r => r.ok ? r.json() : { totalOutstanding: 0 }),
           fetch(`${API_URL}/products/low-stock`, { headers: h }).then(r => r.ok ? r.json() : []),
+          api.getDashboardData().catch(() => null),
         ]);
 
         const active = (arr: any[]) => arr.filter((s: any) => s.status !== 'voided');
@@ -74,6 +84,7 @@ export default function DashboardPage() {
         setMonthRev(sumAmt(active(sMonth)));
         setOutstanding(Number(credStats.totalOutstanding ?? 0));
         setLowStock(Array.isArray(lsRes) ? lsRes.slice(0, 5) : []);
+        setSubscription(dashboardRes?.subscription ?? null);
       } catch {/* silent */}
       finally { setLoading(false); }
     };
@@ -81,6 +92,15 @@ export default function DashboardPage() {
   }, [user?.id]);
 
   const netToday = useMemo(() => today ? today.profit - today.expenses : 0, [today]);
+  const subscriptionDaysRemaining = useMemo(() => {
+    if (!subscription?.endsAt) return null;
+    const remaining = new Date(subscription.endsAt).getTime() - Date.now();
+    return Number.isFinite(remaining) ? Math.ceil(remaining / 86_400_000) : null;
+  }, [subscription?.endsAt]);
+  const showSubscriptionReminder = subscription?.status === 'active'
+    && subscriptionDaysRemaining !== null
+    && subscriptionDaysRemaining > 0
+    && subscriptionDaysRemaining <= 2;
   const greet = useMemo(() => {
     const h = new Date().getHours();
     return h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
@@ -112,8 +132,18 @@ export default function DashboardPage() {
         </section>
 
         {/* Low stock + outstanding credits alert bar */}
-        {!loading && (lowStock.length > 0 || outstanding > 0) && (
+        {!loading && (lowStock.length > 0 || outstanding > 0 || showSubscriptionReminder) && (
           <div className="flex flex-col sm:flex-row gap-3">
+            {showSubscriptionReminder && (
+              <Link to="/subscription" className="flex-1 flex items-center gap-3 rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 hover:bg-amber-100 transition">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-sm font-bold text-amber-700">!</div>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-amber-900">Subscription due in {subscriptionDaysRemaining} day{subscriptionDaysRemaining === 1 ? '' : 's'}</p>
+                  <p className="text-xs text-amber-700">Pay {subscription?.currency} {Number(subscription?.amount).toLocaleString()} to keep account access.</p>
+                </div>
+                <span className="ml-auto text-xs font-semibold text-amber-800 shrink-0">Subscription →</span>
+              </Link>
+            )}
             {lowStock.length > 0 && (
               <Link to="/restock" className="flex-1 flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 hover:bg-amber-100 transition">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-100 text-xs font-bold text-amber-700">!</div>
