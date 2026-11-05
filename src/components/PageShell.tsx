@@ -143,40 +143,45 @@ export default function PageShell({ title, description, children }: PageShellPro
   );
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.08),_transparent_32%),linear-gradient(135deg,_#f8fafc_0%,_#eef4ff_100%)]">
+    <div className="workspace-shell min-h-screen bg-[#f4f7f3]">
 
       {/* Header */}
-      <header className="sticky top-0 z-30 border-b border-slate-200/80 bg-white/90 backdrop-blur">
-        <div className="flex items-center justify-between px-4 py-3 sm:px-6">
+      <header className="workspace-topbar sticky top-0 z-30 border-b border-slate-200/80 bg-white/95 backdrop-blur">
+        <div className="mx-auto flex h-[68px] w-full max-w-[1800px] items-center justify-between px-4 sm:px-6">
           <Link to="/dashboard" className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-500 text-base font-bold text-white shadow shadow-brand-500/30">
-              E
+            <div className="flex h-10 w-10 items-center justify-center rounded-[14px_14px_14px_5px] bg-[#23845b] font-display text-xl font-semibold text-white shadow-md shadow-green-900/15">
+              e
             </div>
             <div className="hidden sm:block">
-              <p className="text-base font-semibold text-slate-900 leading-tight">E-DUUKA</p>
-              <p className="text-[10px] text-slate-500 leading-tight">Merchant workspace</p>
+              <p className="font-display text-base font-semibold leading-tight tracking-tight text-slate-900">E-DUUKA</p>
+              <p className="mt-0.5 text-xs leading-tight text-slate-500">Business workspace</p>
             </div>
           </Link>
 
           <div className="flex items-center gap-2">
-            <div className="hidden sm:flex flex-col items-end mr-1">
-              <span className="text-sm font-semibold text-slate-700">{user?.name}</span>
+            <div className="mr-2 hidden items-center gap-2.5 sm:flex">
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-[#e8f2e9] text-sm font-bold text-[#26764e]">
+                {user?.name?.trim().charAt(0).toUpperCase() || 'U'}
+              </span>
+              <span className="max-w-44 truncate text-sm font-semibold text-slate-700">{user?.name}</span>
             </div>
             <button
               type="button"
               onClick={handleLogout}
-              className="hidden sm:inline-flex rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50"
+              className="hidden rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-[#c7dccb] hover:bg-[#f5faf5] hover:text-[#26764e] sm:inline-flex"
             >
               Sign out
             </button>
             <button
               type="button"
               onClick={() => setMenuOpen(!menuOpen)}
-              className="lg:hidden flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600"
+              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50 lg:hidden"
               aria-label="Toggle menu"
+              aria-expanded={menuOpen}
+              aria-controls="mobile-workspace-navigation"
             >
               {menuOpen
-                ? <span className="text-[10px] font-bold leading-none">Close</span>
+                ? <span className="text-xl leading-none" aria-hidden="true">×</span>
                 : <span className="flex flex-col gap-1 items-center justify-center w-5">
                     <span className="block h-0.5 w-4 bg-slate-600 rounded" />
                     <span className="block h-0.5 w-4 bg-slate-600 rounded" />
@@ -192,7 +197,8 @@ export default function PageShell({ title, description, children }: PageShellPro
       {menuOpen && (
         <div className="lg:hidden fixed inset-0 z-20 bg-slate-950/40" onClick={closeMenu}>
           <div
-            className="absolute top-[57px] left-0 right-0 bg-white border-b border-slate-200 shadow-xl px-4 py-4 max-h-[80vh] overflow-y-auto"
+            id="mobile-workspace-navigation"
+            className="absolute left-0 right-0 top-[68px] max-h-[calc(100vh-68px)] overflow-y-auto border-b border-slate-200 bg-white px-4 py-4 shadow-xl"
             onClick={(e) => e.stopPropagation()}
           >
             <NavLinks onClick={closeMenu} />
@@ -208,32 +214,34 @@ export default function PageShell({ title, description, children }: PageShellPro
       )}
 
       {/* Body */}
-      <div className="flex min-h-[calc(100vh-57px)]">
+      <div className="mx-auto flex min-h-[calc(100vh-68px)] max-w-[1800px]">
 
         {/* Desktop sidebar */}
-        <aside className="hidden lg:flex lg:w-60 lg:shrink-0 lg:flex-col border-r border-slate-200/80 bg-white/95 p-4 backdrop-blur">
-          <div className="rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 p-3 text-white shadow shadow-brand-500/20">
-            <p className="text-xs font-semibold uppercase tracking-widest text-brand-100">Store hub</p>
-            <p className="mt-1 text-sm font-semibold">Run your shop smartly.</p>
+        <aside className="workspace-sidebar sticky top-[68px] hidden h-[calc(100vh-68px)] w-[272px] shrink-0 flex-col border-r border-slate-200/80 bg-white/90 p-4 backdrop-blur lg:flex">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#286e4a] via-[#23845b] to-[#176844] p-4 text-white shadow-lg shadow-green-950/10">
+            <div className="pointer-events-none absolute -right-7 -top-8 h-24 w-24 rounded-full border border-white/15 shadow-[0_0_0_14px_rgba(255,255,255,0.05)]" />
+            <p className="relative text-[11px] font-semibold uppercase tracking-[0.16em] text-green-100">Store hub</p>
+            <p className="relative mt-2 text-sm font-semibold">Run your business smartly.</p>
           </div>
           {user?.name && (
-            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-              <p className="text-sm font-semibold text-slate-800 truncate">{user.name}</p>
+            <div className="mt-3 rounded-xl border border-[#e5ece4] bg-[#f8faf7] px-3 py-2.5">
+              <p className="text-[11px] font-medium text-slate-500">Signed in as</p>
+              <p className="mt-0.5 truncate text-sm font-semibold text-slate-800">{user.name}</p>
             </div>
           )}
-          <nav className="mt-2 flex-1 space-y-0.5 overflow-y-auto">
+          <nav aria-label="Main navigation" className="mt-3 flex-1 space-y-1 overflow-y-auto pb-2">
             <NavLinks />
           </nav>
         </aside>
 
         {/* Main content */}
-        <main className="flex-1 min-w-0 bg-white/90 backdrop-blur p-4 sm:p-6">
-          <div className="mb-5 border-b border-slate-200 pb-4">
-            <p className="text-xs font-semibold uppercase tracking-widest text-brand-700">E-DUUKA</p>
-            <h1 className="mt-1 text-2xl font-bold text-slate-900">{title}</h1>
-            {description && <p className="mt-1 text-base text-slate-600">{description}</p>}
+        <main className="workspace-main min-w-0 flex-1 p-4 sm:p-6 lg:p-8">
+          <div className="workspace-page-heading mb-6 border-b border-[#e4eae3] pb-5">
+            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#39815a]">Your workspace</p>
+            <h1 className="mt-1 font-display text-3xl font-semibold tracking-tight text-[#17241d]">{title}</h1>
+            {description && <p className="mt-1.5 max-w-3xl text-sm leading-6 text-slate-600 sm:text-base">{description}</p>}
           </div>
-          {children}
+          <div className="workspace-content">{children}</div>
         </main>
       </div>
     </div>

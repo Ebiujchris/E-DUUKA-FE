@@ -905,3 +905,153 @@
     transform: none;
   }
 }
+
+.workspace-shell {
+  color: #26372c;
+  background:
+    radial-gradient(ellipse at 92% 0%, #e6efe4 0, transparent 34%),
+    #f4f7f3;
+}
+
+.workspace-topbar {
+  border-color: #e4eae3;
+  box-shadow: 0 3px 14px #183d2408;
+}
+
+.workspace-sidebar {
+  border-color: #e4eae3;
+  box-shadow: 4px 0 18px #183d2405;
+}
+
+.workspace-sidebar nav a,
+.workspace-sidebar nav button {
+  min-height: 42px;
+}
+
+.workspace-sidebar nav a[aria-current="page"] {
+  background: #e8f2e9;
+  color: #26764e;
+  box-shadow: inset 3px 0 #39815a;
+}
+
+.workspace-sidebar nav a[aria-current="page"] span {
+  color: #39815a;
+}
+
+.workspace-sidebar nav a:not([aria-current="page"]):hover,
+.workspace-sidebar nav button:hover {
+  background: #f2f6f1;
+  color: #284335;
+}
+
+.workspace-sidebar nav::-webkit-scrollbar,
+.workspace-content *::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.workspace-sidebar nav::-webkit-scrollbar-thumb,
+.workspace-content *::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: #d6e0d6;
+  background-clip: padding-box;
+}
+
+.workspace-main {
+  background: transparent;
+}
+
+.workspace-page-heading h1 {
+  line-height: 1.15;
+}
+
+.workspace-content [class*="rounded-2xl"][class*="border"],
+.workspace-content [class*="rounded-xl"][class*="border"][class*="bg-white"] {
+  border-color: #e4eae3;
+  box-shadow: 0 8px 26px #1c3c2608, 0 1px 3px #1c3c2606;
+}
+
+.workspace-content input:not([type="checkbox"]):not([type="radio"]),
+.workspace-content select,
+.workspace-content textarea {
+  border-color: #dce5dc;
+  background-color: #fff;
+  color: #26372c;
+  transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+
+.workspace-content input:not([type="checkbox"]):not([type="radio"]):focus,
+.workspace-content select:focus,
+.workspace-content textarea:focus {
+  border-color: #70a887;
+  box-shadow: 0 0 0 3px #39815a1a;
+  outline: none;
+}
+
+.workspace-content input::placeholder,
+.workspace-content textarea::placeholder {
+  color: #98a49a;
+}
+
+.workspace-content table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.workspace-content thead th {
+  border-bottom: 1px solid #e8eee7;
+  background: #f8faf7;
+  color: #66776b;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .035em;
+}
+
+.workspace-content tbody tr {
+  transition: background-color .14s ease;
+}
+
+.workspace-content tbody tr:hover {
+  background-color: #f8fbf7;
+}
+
+.workspace-content :is(button, a, input, select, textarea):focus-visible {
+  outline: 3px solid #39815a55;
+  outline-offset: 2px;
+}
+
+.workspace-content button[class*="bg-brand-"]:not(:disabled) {
+  box-shadow: 0 5px 13px #1768441c;
+  transition: background-color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.workspace-content button[class*="bg-brand-"]:not(:disabled):hover {
+  box-shadow: 0 7px 17px #17684428;
+  transform: translateY(-1px);
+}
+
+@media (max-width: 639px) {
+  .workspace-main {
+    padding: 1.125rem;
+  }
+
+  .workspace-page-heading {
+    margin-bottom: 1.25rem;
+    padding-bottom: 1rem;
+  }
+
+  .workspace-page-heading h1 {
+    font-size: 1.75rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-content tbody tr,
+  .workspace-content input,
+  .workspace-content select,
+  .workspace-content textarea,
+  .workspace-content button {
+    transition: none;
+  }
+}
