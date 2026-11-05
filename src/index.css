@@ -966,19 +966,57 @@
   line-height: 1.15;
 }
 
-.workspace-content [class*="rounded-2xl"][class*="border"],
-.workspace-content [class*="rounded-xl"][class*="border"][class*="bg-white"] {
+.workspace-content :is(div, section, article)[class*="rounded-2xl"][class*="border-slate-"] {
   border-color: #e4eae3;
-  box-shadow: 0 8px 26px #1c3c2608, 0 1px 3px #1c3c2606;
+  box-shadow: 0 7px 22px #1c3c2608, 0 1px 3px #1c3c2606;
+}
+
+.workspace-content :is(div, section, article)[class*="rounded-xl"][class*="border-slate-"] {
+  border-color: #e7ece6;
+}
+
+.workspace-content h2,
+.workspace-content h3 {
+  font-family: var(--font-display);
+  letter-spacing: -.015em;
+}
+
+.workspace-content h2 {
+  line-height: 1.35;
+}
+
+.workspace-content label {
+  color: #53645a;
+  font-weight: 600;
+}
+
+.workspace-content .text-xs {
+  font-size: .8125rem;
+  line-height: 1.25rem;
+}
+
+.workspace-content [class*="text-[10px]"] {
+  font-size: .7rem;
+  line-height: 1rem;
+}
+
+.workspace-content [class*="text-[11px]"] {
+  font-size: .75rem;
+  line-height: 1rem;
 }
 
 .workspace-content input:not([type="checkbox"]):not([type="radio"]),
 .workspace-content select,
 .workspace-content textarea {
+  min-height: 44px;
   border-color: #dce5dc;
   background-color: #fff;
   color: #26372c;
   transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
+}
+
+.workspace-content textarea {
+  min-height: 96px;
 }
 
 .workspace-content input:not([type="checkbox"]):not([type="radio"]):focus,
@@ -995,8 +1033,10 @@
 }
 
 .workspace-content table {
+  width: 100%;
   border-collapse: separate;
   border-spacing: 0;
+  font-size: .875rem;
 }
 
 .workspace-content thead th {
@@ -1006,14 +1046,32 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: .035em;
+  padding: .8rem .75rem;
 }
 
 .workspace-content tbody tr {
   transition: background-color .14s ease;
 }
 
+.workspace-content tbody td {
+  border-bottom: 1px solid #edf1ec;
+  padding: .75rem;
+}
+
+.workspace-content tbody tr:last-child td {
+  border-bottom: 0;
+}
+
 .workspace-content tbody tr:hover {
   background-color: #f8fbf7;
+}
+
+.workspace-content button {
+  transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+.workspace-content button:disabled {
+  cursor: not-allowed;
 }
 
 .workspace-content :is(button, a, input, select, textarea):focus-visible {
@@ -1043,6 +1101,12 @@
 
   .workspace-page-heading h1 {
     font-size: 1.75rem;
+  }
+
+  .workspace-content table {
+    display: block;
+    overflow-x: auto;
+    white-space: nowrap;
   }
 }
 
