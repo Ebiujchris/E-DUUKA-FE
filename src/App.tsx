@@ -29,7 +29,9 @@ function ProtectedRoute({ children, requiredPermission }: { children: ReactNode;
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-slate-50">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-brand-500 border-t-transparent" />
+        <div className="app-loading-mark" role="status" aria-label="Loading">
+          <span>e</span>
+        </div>
       </div>
     );
   }
@@ -54,7 +56,9 @@ export default function App() {
       fallback={
         <div className="flex min-h-screen items-center justify-center bg-slate-50">
           <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 shadow-sm">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-brand-500 border-t-transparent" />
+            <div className="app-loading-mark app-loading-mark-small" role="status" aria-label="Loading">
+              <span>e</span>
+            </div>
             Loading E-Duuka…
           </div>
         </div>
