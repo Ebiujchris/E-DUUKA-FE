@@ -892,17 +892,19 @@
   }
 
   .landing-hero::after {
-    top: 47%;
-    bottom: auto;
-    left: auto;
-    right: 12px;
-    width: 42px;
-    height: 42px;
-    background: transparent;
-    border: 1px solid #ffffff35;
-    border-radius: 50%;
-    box-shadow: 0 0 0 7px #ffffff08, 0 0 0 8px #ffffff24;
-    transform: none;
+    top: 0;
+    right: auto;
+    bottom: 0;
+    left: 50%;
+    width: 100vw;
+    height: auto;
+    border: 0;
+    border-radius: 0;
+    background:
+      radial-gradient(ellipse at 75% 38%, #286244 0, #28624400 42%),
+      linear-gradient(112deg, #153d2b, #194c35 60%, #1c5139);
+    box-shadow: none;
+    transform: translateX(-50%);
   }
 }
 
