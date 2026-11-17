@@ -129,7 +129,7 @@ export default function SettingsPage() {
 
   return (
     <PageShell title="Settings" description="Manage your profile, shop details and account security.">
-      <div className="max-w-2xl space-y-6">
+      <div className="mx-auto w-full max-w-3xl space-y-6">
         {shopLoadError && <p role="alert" className="text-sm text-red-600">{shopLoadError}</p>}
 
         {/* Profile */}
