@@ -2,17 +2,18 @@ import { useEffect, useState } from 'react';
 import PageShell from '../components/PageShell';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/Toast';
-import { API_URL, authHeader } from '../lib/api';
+import { API_URL, authHeader, bustCache } from '../lib/api';
 
 interface ShopInfo {
   id: string;
   name: string;
   location?: string;
+  phone?: string | null;
   initialCapital?: number;
 }
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const toast = useToast();
 
   const [profile, setProfile] = useState({ name: user?.name ?? '', email: user?.email ?? '' });
@@ -20,20 +21,41 @@ export default function SettingsPage() {
 
   const [passwords, setPasswords] = useState({ current: '', newPass: '', confirm: '' });
   const [savingProfile, setSavingProfile] = useState(false);
+  const [savingShop, setSavingShop] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
+  const [shopDraft, setShopDraft] = useState({ name: '', location: '', phone: '' });
+  const [shopLoadError, setShopLoadError] = useState('');
 
   useEffect(() => {
     if (!user?.shopId) return;
+    let active = true;
+    setShopLoadError('');
     fetch(`${API_URL}/users/me`, { headers: authHeader() })
-      .then(r => r.json())
+      .then(async r => {
+        if (!r.ok) throw new Error('Failed to load account and shop details');
+        return r.json();
+      })
       .then(data => {
+        if (!active) return;
         setProfile({ name: data.name ?? '', email: data.email ?? '' });
         if (data.shop) {
           setShop(data.shop);
+          setShopDraft({
+            name: data.shop.name ?? '',
+            location: data.shop.location ?? '',
+            phone: data.shop.phone ?? '',
+          });
         }
       })
-      .catch(() => {});
-  }, [user?.id]);
+      .catch(err => {
+        if (active) {
+          const message = err instanceof Error ? err.message : 'Failed to load shop details';
+          console.error('Unable to load account and shop details:', err);
+          setShopLoadError(message);
+        }
+      });
+    return () => { active = false; };
+  }, [user?.id, user?.shopId]);
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +70,40 @@ export default function SettingsPage() {
       toast.success('Profile updated');
     } catch (err) { toast.error(err instanceof Error ? err.message : 'Update failed'); }
     finally { setSavingProfile(false); }
+  };
+
+  const handleSaveShop = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingShop(true);
+    try {
+      const res = await fetch(`${API_URL}/users/me/shop`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...authHeader() },
+        body: JSON.stringify({
+          name: shopDraft.name.trim(),
+          location: shopDraft.location.trim(),
+          phone: shopDraft.phone.trim() || null,
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.message || 'Failed to update shop details');
+      }
+      const updatedShop: ShopInfo = await res.json();
+      setShop(updatedShop);
+      setShopDraft({
+        name: updatedShop.name ?? '',
+        location: updatedShop.location ?? '',
+        phone: updatedShop.phone ?? '',
+      });
+      bustCache('/users/me');
+      await refreshUser();
+      toast.success('Shop details updated');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to update shop details');
+    } finally {
+      setSavingShop(false);
+    }
   };
 
   const handleChangePassword = async (e: React.FormEvent) => {
@@ -74,6 +130,7 @@ export default function SettingsPage() {
   return (
     <PageShell title="Settings" description="Manage your profile, shop details and account security.">
       <div className="max-w-2xl space-y-6">
+        {shopLoadError && <p role="alert" className="text-sm text-red-600">{shopLoadError}</p>}
 
         {/* Profile */}
         <div className="rounded-2xl border border-slate-200 bg-white p-6">
@@ -102,29 +159,45 @@ export default function SettingsPage() {
           </form>
         </div>
 
-        {/* Shop info (read-only display) */}
+        {/* Shop details */}
         {shop && (
           <div className="rounded-2xl border border-slate-200 bg-white p-6">
             <h2 className="text-base font-semibold text-slate-900 mb-4">Shop details</h2>
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between items-center py-2 border-b border-slate-100">
-                <span className="text-slate-500">Shop name</span>
-                <span className="font-medium text-slate-900">{shop.name}</span>
+            {(user?.accountType ?? 'owner') === 'owner' ? (
+              <form onSubmit={handleSaveShop} className="space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-slate-500 mb-1 block">Shop name</label>
+                  <input className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+                    value={shopDraft.name} onChange={(e) => setShopDraft({ ...shopDraft, name: e.target.value })} required maxLength={120} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 mb-1 block">Location</label>
+                  <input className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+                    value={shopDraft.location} onChange={(e) => setShopDraft({ ...shopDraft, location: e.target.value })} required maxLength={120} />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-slate-500 mb-1 block">Shop phone (optional)</label>
+                  <input type="tel" className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm focus:border-brand-400 focus:outline-none"
+                    value={shopDraft.phone} onChange={(e) => setShopDraft({ ...shopDraft, phone: e.target.value })} maxLength={30} />
+                </div>
+                {shop.initialCapital != null && Number(shop.initialCapital) > 0 && (
+                  <p className="text-sm text-slate-500">
+                    Initial capital: <span className="font-medium text-slate-900">UGX {Number(shop.initialCapital).toLocaleString()}</span>
+                  </p>
+                )}
+                <button type="submit" disabled={savingShop}
+                  className="rounded-xl bg-brand-500 px-5 py-2 text-sm font-semibold text-white disabled:opacity-60 hover:bg-brand-600 transition">
+                  {savingShop ? 'Saving…' : 'Save shop details'}
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-2 text-sm">
+                <p className="font-medium text-slate-900">{shop.name}</p>
+                {shop.location && <p className="text-slate-500">{shop.location}</p>}
+                {shop.phone && <p className="text-slate-500">{shop.phone}</p>}
+                <p className="text-xs text-slate-400 mt-3">Only the shop owner can edit shop details.</p>
               </div>
-              {shop.location && (
-                <div className="flex justify-between items-center py-2 border-b border-slate-100">
-                  <span className="text-slate-500">Location</span>
-                  <span className="font-medium text-slate-900">{shop.location}</span>
-                </div>
-              )}
-              {shop.initialCapital != null && Number(shop.initialCapital) > 0 && (
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-slate-500">Initial capital</span>
-                  <span className="font-medium text-slate-900">UGX {Number(shop.initialCapital).toLocaleString()}</span>
-                </div>
-              )}
-            </div>
-            <p className="text-xs text-slate-400 mt-3">To change shop details, contact support.</p>
+            )}
           </div>
         )}
 

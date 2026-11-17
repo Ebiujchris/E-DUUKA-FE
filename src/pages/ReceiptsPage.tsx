@@ -30,6 +30,13 @@ interface ReceiptGroup {
 }
 
 const fmt = (n: number) => `UGX ${Number(n || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}`;
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;',
+}[character] ?? character));
 
 function groupIntoReceipts(sales: SaleItem[]): ReceiptGroup[] {
   const sorted = [...sales].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -57,6 +64,7 @@ function groupIntoReceipts(sales: SaleItem[]): ReceiptGroup[] {
 
 function printReceipt(group: ReceiptGroup, shopName: string) {
   const receiptNo = group.key.slice(0, 8).toUpperCase();
+  const safeShopName = escapeHtml(shopName || 'E-DUUKA');
   const dateStr = new Date(group.date).toLocaleString('en-UG', { dateStyle: 'medium', timeStyle: 'short' });
 
   const rows = group.items.map((item) => `
@@ -92,12 +100,13 @@ function printReceipt(group: ReceiptGroup, shopName: string) {
       .receipt-footer{margin-top:24px;text-align:center}
       .thank-you{font-size:14px;font-weight:700;color:#0f172a;margin-bottom:6px}
       .footer-note{font-size:11px;color:#94a3b8;line-height:1.6}
+      .powered-by{margin-top:12px;text-align:center;font-size:10px;color:#64748b}
     </style>
     <div class="receipt-wrap">
       <div class="receipt-header">
         <div class="logo-box">ED</div>
         <div>
-          <div class="r-company">${shopName || 'E-DUUKA'}</div>
+          <div class="r-company">${safeShopName}</div>
           <div class="r-tagline">Shop Management</div>
         </div>
       </div>
@@ -120,9 +129,10 @@ function printReceipt(group: ReceiptGroup, shopName: string) {
       <div class="total-row"><span>Total Amount</span><span class="total-amount">${fmt(group.total)}</span></div>
       <div class="receipt-footer">
         <div class="thank-you">Thank you for your business!</div>
-        <div class="footer-note">${shopName || 'E-DUUKA'} Shop Management</div>
+        <div class="footer-note">${safeShopName} Shop Management</div>
         <div class="footer-note">Keep this receipt for your records</div>
       </div>
+      <div class="powered-by">Powered by E-Duuka</div>
     </div>
   `, `Receipt #${receiptNo}`);
 }
@@ -250,7 +260,7 @@ export default function ReceiptsPage() {
                             <p className="text-[10px] text-slate-400 uppercase tracking-wide">Total</p>
                             <p className="text-lg font-bold text-slate-900">{fmt(group.total)}</p>
                           </div>
-                          <button type="button" onClick={() => printReceipt(group, user?.shopName ?? '')}
+                          <button type="button" onClick={() => printReceipt(group, user?.shop?.name || user?.shopName || '')}
                             className="flex items-center gap-1.5 rounded-xl bg-brand-500 px-4 py-2 text-xs font-semibold text-white shadow shadow-brand-500/20 hover:bg-brand-600 transition">
                             Print
                           </button>

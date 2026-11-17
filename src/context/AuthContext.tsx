@@ -15,6 +15,7 @@ interface AuthContextValue {
   subscriptionExpiredMessage: string | null;
   isAuthenticated: boolean;
   loading: boolean;
+  refreshUser: () => Promise<User>;
   login: (phone: string, password: string) => Promise<void>;
   register: (
     phone: string,
@@ -184,17 +185,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setSubscriptionExpiredMessage(null);
   }, [clearSession]);
 
+  const refreshUser = useCallback(async () => {
+    const currentUser = await api.getCurrentUser();
+    setUser(currentUser);
+    localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
+    return currentUser;
+  }, []);
+
   const value = useMemo(
     () => ({
       user,
       subscriptionExpiredMessage,
       isAuthenticated: !!user,
       loading,
+      refreshUser,
       login,
       register,
       logout,
     }),
-    [user, subscriptionExpiredMessage, loading, login, register, logout],
+    [user, subscriptionExpiredMessage, loading, refreshUser, login, register, logout],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

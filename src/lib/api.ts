@@ -20,6 +20,7 @@ export interface User {
   name: string;
   email?: string;
   shopId?: string;
+  shop?: { name?: string };
   shopName?: string;
   isActive?: boolean;
   accountType?: 'owner' | 'staff';
